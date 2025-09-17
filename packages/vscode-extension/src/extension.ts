@@ -116,6 +116,65 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('claude-context.searchMemory', () => searchConversationMemory()),
         vscode.commands.registerCommand('claude-context.validateMCP', () => validateMCPConnection()),
 
+        // Debug command for thread detection
+        vscode.commands.registerCommand('vectorMemory.debugThreads', async () => {
+            const output = vscode.window.createOutputChannel('Vector Memory Debug');
+            output.clear();
+            output.show();
+
+            output.appendLine('=== THREAD DETECTION DEBUG ===');
+            output.appendLine(`Timestamp: ${new Date().toISOString()}`);
+            output.appendLine('');
+
+            // Test MCP Context Manager
+            output.appendLine('1. Testing MCP Context Manager...');
+            if (!mcpContextManager) {
+                output.appendLine('❌ MCP Context Manager is null/undefined');
+                return;
+            }
+            output.appendLine('✅ MCP Context Manager exists');
+
+            // Test current thread detection
+            output.appendLine('');
+            output.appendLine('2. Testing current thread detection...');
+            const currentThread = mcpContextManager.getCurrentThread();
+            output.appendLine(`Current Thread ID: ${currentThread?.threadId || 'null'}`);
+            output.appendLine(`Current Thread Title: ${currentThread?.threadTitle || 'null'}`);
+
+            // Test MCP connection and thread retrieval
+            output.appendLine('');
+            output.appendLine('3. Testing MCP thread retrieval...');
+            try {
+                const threads = await mcpContextManager.searchThreads('');
+                output.appendLine(`✅ MCP searchThreads successful`);
+                output.appendLine(`Found ${threads.length} threads`);
+
+                if (threads.length > 0) {
+                    output.appendLine('');
+                    output.appendLine('Available threads:');
+                    threads.forEach((thread, index) => {
+                        output.appendLine(`  ${index + 1}. "${thread.threadTitle}" (ID: ${thread.threadId})`);
+                        output.appendLine(`     Sessions: ${thread.sessionCount}, Last: ${thread.lastActivity.toLocaleDateString()}`);
+                    });
+                } else {
+                    output.appendLine('ℹ️ No threads found in storage');
+                }
+            } catch (error) {
+                output.appendLine(`❌ MCP searchThreads failed: ${error}`);
+            }
+
+            // Test MCP configuration
+            output.appendLine('');
+            output.appendLine('4. Testing MCP configuration...');
+            const config = vscode.workspace.getConfiguration('claude-context');
+            output.appendLine(`MCP Enabled: ${config.get('mcp.enabled', false)}`);
+            output.appendLine(`MCP Server URI: ${config.get('mcp.serverUri', 'default')}`);
+            output.appendLine(`MCP Transport: ${config.get('mcp.transport', 'stdio')}`);
+
+            output.appendLine('');
+            output.appendLine('=== DEBUG COMPLETE ===');
+        }),
+
         // Register thread management commands
         vscode.commands.registerCommand('claude-context.browseThreads', () => mcpContextManager.showThreadBrowser()),
         vscode.commands.registerCommand('claude-context.searchThreads', () => searchThreads()),
