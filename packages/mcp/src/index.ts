@@ -326,13 +326,22 @@ This tool is versatile and can be used before completing various tasks to retrie
                 case "get_indexing_status":
                     return await this.toolHandlers.handleGetIndexingStatus(args);
                 case "store_conversation":
-                    return await this.toolHandlers.storeConversation(args.conversationData);
+                    if (!args || typeof args !== 'object' || !('conversationData' in args)) {
+                        throw new Error('store_conversation requires conversationData argument');
+                    }
+                    return await this.toolHandlers.storeConversation(args.conversationData as any);
                 case "search_memory":
-                    return await this.toolHandlers.searchMemory(args.query, args);
+                    if (!args || typeof args !== 'object' || !('query' in args)) {
+                        throw new Error('search_memory requires query argument');
+                    }
+                    return await this.toolHandlers.searchMemory(args.query as string, args as any);
                 case "list_sessions":
-                    return await this.toolHandlers.listSessions(args);
+                    return await this.toolHandlers.listSessions(args as any);
                 case "bootstrap_context":
-                    return await this.toolHandlers.bootstrapContext(args.query, args.project);
+                    if (!args || typeof args !== 'object' || !('query' in args)) {
+                        throw new Error('bootstrap_context requires query argument');
+                    }
+                    return await this.toolHandlers.bootstrapContext(args.query as string, (args as any).project);
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);

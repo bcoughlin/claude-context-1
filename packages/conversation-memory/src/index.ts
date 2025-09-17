@@ -1,5 +1,6 @@
 export { ConversationMemory } from './ConversationMemory'
 export * from './types'
+import { ConversationSession } from './types'
 
 // Convenience function to create a conversation session from summary text
 export function createSessionFromSummary(
@@ -45,7 +46,7 @@ function extractTechnologies(text: string): string[] {
   ]
 
   const technologies = new Set<string>()
-  
+
   techPatterns.forEach(pattern => {
     const matches = text.matchAll(pattern)
     for (const match of matches) {

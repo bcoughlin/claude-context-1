@@ -8,6 +8,12 @@ dist/
 build/
 *.tsbuildinfo
 
+# Build artifacts
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts.map
+
 # Environment variables
 .env
 .env.local
@@ -62,6 +68,10 @@ __pycache__/
 CLAUDE.md
 
 .cursor/*
+
+# Conversation memory storage (user data, not source code)
+./conversation-memory/
+.conversation-memory/
 
 evaluation/repos
 repos

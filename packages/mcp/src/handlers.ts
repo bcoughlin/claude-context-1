@@ -866,9 +866,9 @@ export class ToolHandlers {
 
             let responseText = `🧠 Found ${results.length} relevant conversation(s):\n\n`;
 
-            results.forEach((result, idx) => {
+            results.forEach((result: any, idx: number) => {
                 responseText += `## ${idx + 1}. ${result.session.title}\n`;
-                responseText += `**Date:** ${result.session.timestamp.toLocaleDateString()}\n`;
+                responseText += `**Date:** ${new Date(result.session.timestamp).toLocaleDateString()}\n`;
                 responseText += `**Technologies:** ${result.session.technologies.join(', ')}\n`;
                 responseText += `**Relevance:** ${(result.relevanceScore * 100).toFixed(1)}%\n`;
                 responseText += `**Context:** ${result.context}\n\n`;
@@ -915,10 +915,10 @@ export class ToolHandlers {
 
             let responseText = `📚 Found ${sessions.length} conversation session(s):\n\n`;
 
-            sessions.forEach((session, idx) => {
+            sessions.forEach((session: any, idx: number) => {
                 responseText += `## ${idx + 1}. ${session.title}\n`;
                 responseText += `**ID:** ${session.id}\n`;
-                responseText += `**Date:** ${session.timestamp.toLocaleDateString()}\n`;
+                responseText += `**Date:** ${new Date(session.timestamp).toLocaleDateString()}\n`;
                 responseText += `**Project:** ${session.project || 'None'}\n`;
                 responseText += `**Technologies:** ${session.technologies.join(', ')}\n`;
                 responseText += `**Summary:** ${session.summary.substring(0, 150)}${session.summary.length > 150 ? '...' : ''}\n\n`;
@@ -949,12 +949,32 @@ export class ToolHandlers {
         try {
             console.log(`[MEMORY] Bootstrapping context for: "${query}"`);
 
-            const contextText = await this.conversationMemory.bootstrapContext(query, project);
+            const result = await this.conversationMemory.bootstrapContext(query, { project });
+            
+            let responseText = `🚀 Context Bootstrap Results:\n\n`;
+            responseText += `**Context Summary:**\n${result.contextSummary}\n\n`;
+            
+            if (result.relevantSessions.length > 0) {
+                responseText += `**Relevant Sessions Found:** ${result.relevantSessions.length}\n\n`;
+                result.relevantSessions.forEach((searchResult: any, idx: number) => {
+                    responseText += `${idx + 1}. ${searchResult.session.title}\n`;
+                    responseText += `   **Date:** ${new Date(searchResult.session.timestamp).toLocaleDateString()}\n`;
+                    responseText += `   **Relevance:** ${(searchResult.relevanceScore * 100).toFixed(1)}%\n`;
+                    responseText += `   **Context:** ${searchResult.context.substring(0, 100)}...\n\n`;
+                });
+            }
+            
+            if (result.suggestedActions.length > 0) {
+                responseText += `**Suggested Actions:**\n`;
+                result.suggestedActions.forEach((action: string, idx: number) => {
+                    responseText += `${idx + 1}. ${action}\n`;
+                });
+            }
 
             return {
                 content: [{
                     type: "text",
-                    text: `🚀 Context Bootstrap Results:\n\n${contextText}`
+                    text: responseText
                 }]
             };
 
