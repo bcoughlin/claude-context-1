@@ -19,6 +19,31 @@
 
 💰 **Cost-Effective for Large Codebases**: Instead of loading entire directories into Claude for every request, which can be very expensive, Claude Context efficiently stores your codebase in a vector database and only uses related code in context to keep your costs manageable.
 
+## 🚀 Revolutionary Enhancement: Infinite Conversation Memory
+
+**This fork adds groundbreaking conversation memory capabilities** that solve the fundamental limitation of AI assistance - losing context at token boundaries.
+
+### 🧠 Persistent AI Memory System
+- **Automatic Context Preservation**: AI conversations are automatically stored with vector embeddings before hitting token limits
+- **Semantic Conversation Search**: Find relevant past discussions using natural language queries
+- **Infinite Session Continuity**: Maintain technical context across unlimited conversation length
+- **Intelligent Context Restoration**: Smart bootstrapping of relevant conversation history for new sessions
+
+### ⚡ Self-Managing Token Workflow
+Enhanced VS Code Copilot instructions (`.vscode/copilot-instructions.md`) provide:
+- **Automated Token Tracking**: Continuous monitoring throughout coding sessions
+- **Proactive Context Storage**: Auto-trigger conversation memory at 85-90% token capacity
+- **Seamless Session Transitions**: Fresh context with intelligent history loading
+- **Zero User Intervention**: Completely transparent infinite conversation capability
+
+### 🎯 Revolutionary Benefits
+- **Never Lose Technical Context**: Architectural decisions and debugging solutions preserved forever
+- **Cross-Session Continuity**: Reference past technical discussions weeks or months later
+- **Rate Limit Resilience**: Continue complex technical work without interruption
+- **Knowledge Accumulation**: AI builds upon previous conversations for better assistance
+
+**Result**: The first AI coding assistant with true long-term memory and infinite conversation capability.
+
 ---
 
 ## 🚀 Demo
@@ -490,6 +515,47 @@ To configure custom embedding models (e.g., `text-embedding-3-large` for OpenAI,
 
 For detailed explanation of file inclusion and exclusion rules, and how to customize them, see our [File Inclusion & Exclusion Rules](docs/dive-deep/file-inclusion-rules.md).
 
+## 🧠 Using Conversation Memory Features
+
+This fork includes revolutionary conversation memory capabilities that work seamlessly with the enhanced VS Code Copilot instructions.
+
+### Automatic Token Management & Memory Storage
+
+Copy the enhanced `.vscode/copilot-instructions.md` file to your project to enable:
+
+1. **Automatic Token Tracking**: AI continuously monitors conversation length
+2. **Proactive Memory Storage**: Auto-stores conversation at 85-90% token capacity  
+3. **Seamless Session Transitions**: Fresh context with relevant history loading
+4. **Zero Configuration**: Works automatically with any MCP-compatible AI assistant
+
+### Manual Conversation Memory Tools
+
+You can also manually use the conversation memory tools:
+
+```bash
+# Store current conversation with comprehensive summary
+> Use store_conversation tool with technical session details
+
+# Search past conversations
+> Use search_memory tool: "TypeScript compilation issues"
+
+# List all stored sessions  
+> Use list_sessions tool to browse conversation history
+
+# Bootstrap context for new session
+> Use bootstrap_context tool: "conversation memory system development"
+```
+
+### Integration with VS Code Copilot Instructions
+
+The `.vscode/copilot-instructions.md` file provides comprehensive guidelines for:
+- **Token estimation methodology** (text, code, tool calls)
+- **Automated conversation storage triggers** at capacity thresholds
+- **Seamless session transition workflows** with context preservation
+- **Revolutionary infinite conversation capability** across any number of sessions
+
+This creates the first AI coding assistant with true long-term memory and unlimited conversation length.
+
 ### Available Tools
 
 #### 1. `index_codebase`
@@ -507,6 +573,24 @@ Clear the search index for a specific codebase.
 #### 4. `get_indexing_status`
 
 Get the current indexing status of a codebase. Shows progress percentage for actively indexing codebases and completion status for indexed codebases.
+
+### 🧠 Revolutionary Conversation Memory Tools
+
+#### 5. `store_conversation`
+
+Store conversation sessions with vector embeddings for persistent AI memory. Automatically extracts technical content, technologies used, and creates searchable conversation history.
+
+#### 6. `search_memory`
+
+Search past conversations using semantic similarity. Find relevant technical discussions, architectural decisions, and debugging solutions from previous sessions.
+
+#### 7. `list_sessions`
+
+Browse stored conversation sessions with metadata including technologies, timestamps, and project associations. Provides overview of conversation history.
+
+#### 8. `bootstrap_context`
+
+Intelligently load relevant conversation history for new sessions. Provides context summary, relevant sessions, and suggested actions based on past discussions.
 
 ---
 

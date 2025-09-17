@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-09-17T04:31:49.041081",
+  "workspace": "/Users/bradleycoughlin/local_code/agent-langchain",
+  "open_files": [
+    "/Users/bradleycoughlin/local_code/agent-langchain/logbook.md",
+    "/Users/bradleycoughlin/local_code/agent-langchain/run.py",
+    "/Users/bradleycoughlin/local_code/agent-langchain/memory_manager.py",
+    "/Users/bradleycoughlin/local_code/agent-langchain/test_agent.py",
+    "/Users/bradleycoughlin/local_code/agent-langchain/claude-context-fork/vscode_chat_bridge.py",
+    "/Users/bradleycoughlin/local_code/agent-langchain/claude-context-fork/inventor_chat4.md",
+    "/Users/bradleycoughlin/local_code/agent-langchain/claude-context-fork/restoration_workflow.md",
+    "/Users/bradleycoughlin/local_code/agent-langchain/SETUP.md",
+    "/Users/bradleycoughlin/local_code/agent-langchain/auth/models.py",
+    "/Users/bradleycoughlin/local_code/agent-langchain/auth/user_manager.py"
+  ],
+  "git_status": "M app.log\n M auth/jwt_auth.py\n M auth/routes.py\n M auth/user_manager.py\n M logs/email.log\n M test_multiuser_system.py\n?? check_user_verification.py\n?? claude-context-fork/\n?? copilot_backup.md",
+  "recent_changes": "b8f6cc5 Implement comprehensive email system with logging and Mailtrap integration\n8a56cc3 refactor: Rename virtual environment to standard .venv convention\n3d94272 fix: Configure pre-commit hooks with Python 3.13 and apply formatting\na440907 docs: Update BLUEPRINT.md and MANUAL.md with code quality tools and workflow\n425e891 feat: Add modern Python linting with Ruff and apply automatic fixes",
+  "active_terminal": "/Users/bradleycoughlin/local_code/agent-langchain",
+  "cursor_position": "Position not available"
+}

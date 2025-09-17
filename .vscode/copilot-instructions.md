@@ -29,6 +29,67 @@ When approaching token limits:
    - Preserve: Code patterns, project state, user preferences
    - Maintain: Seamless conversation flow across token boundaries
 
+## Comprehensive Context Storage Standards
+
+### CRITICAL: All-Encompassing Storage Requirements
+When storing conversations, include EVERYTHING since last storage:
+
+#### Complete Dialogue Flow
+- **Every user prompt** and question asked
+- **Full assistant responses** with reasoning chains
+- **Back-and-forth evolution** of ideas and concepts
+- **Collaborative insights** and breakthrough moments
+
+#### Research Provenance (MANDATORY)
+- **Search tools used**: `github_repo`, `semantic_search`, `read_file`, `fetch_webpage`, etc.
+- **Exact queries executed**: What was searched for and why
+- **Sources examined**: URLs, file paths, repository names, specific line numbers
+- **Search results**: Actual content returned from searches
+- **Evidence chains**: How search results led to conclusions
+- **Source analysis**: What insights were derived from which sources
+
+#### Technical Context
+- **Files created/modified**: Complete list with purposes
+- **Code changes**: What was implemented and why
+- **Architecture decisions**: Technical choices made and rationale
+- **Problem-solving process**: How issues were identified and resolved
+
+#### Reasoning Transparency
+- **Thought processes**: Step-by-step reasoning between responses
+- **Strategy evolution**: How approaches changed through conversation
+- **Knowledge synthesis**: How multiple sources combined into insights
+- **Collaborative discoveries**: Moments where user and assistant built ideas together
+
+### Storage Format Template
+```
+# Comprehensive Session: [Title]
+
+## Complete Timeline Since Last Storage
+- **Previous Storage**: Session ID and timestamp
+- **Session Duration**: X hours/minutes of conversation
+- **Context**: What prompted this session
+
+## User-Assistant Exchange Sequence
+[Every prompt and response with timestamps]
+
+## Research Process Documentation
+### Searches Conducted:
+- Tool: [github_repo/semantic_search/etc.]
+- Query: "exact search terms"
+- Source: [URL/file path/repository]
+- Results: [key findings]
+- Impact: [how this influenced conclusions]
+
+## Technical Implementation
+[Files created, code changes, decisions made]
+
+## Collaborative Insights
+[Breakthrough moments, joint discoveries]
+
+## Session Significance
+[Why this conversation matters for future reference]
+```
+
 ## Revolutionary Context Memory Tools
 Available MCP tools for infinite conversation capability:
 
