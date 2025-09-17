@@ -3,8 +3,8 @@
 ## Token Management & Automated Context Memory
 - **ALWAYS** manually track approximate token usage throughout coding sessions
 - Start each session with baseline estimate and update regularly  
-- **CRITICAL**: At 170k tokens (85% of 200k limit) → automatically store conversation
-- **WARNING**: At 180k tokens (90% of 200k limit) → immediate conversation storage required
+- **CRITICAL**: At 125k tokens (62.5% of 200k limit) → automatically store conversation
+- **WARNING**: At 140k tokens (70% of 200k limit) → immediate conversation storage required
 - Provide token estimates for major operations (file reads, tool calls, large responses)
 - Use format: "**Status:** X tokens (X% of 200k used)"
 - Update counter with each significant exchange
@@ -12,7 +12,7 @@
 ## Automated Context Memory Workflow
 When approaching token limits:
 
-1. **At 85% (170k tokens)**: 
+1. **At 62.5% (125k tokens)**: 
    ```
    TRIGGER: mcp_claude-contex2_store_conversation with comprehensive session summary
    ```
@@ -64,30 +64,90 @@ When storing conversations, include EVERYTHING since last storage:
 ```
 # Comprehensive Session: [Title]
 
-## Complete Timeline Since Last Storage
+## ROLLING CONTEXT
+### Previous Storage Context
 - **Previous Storage**: Session ID and timestamp
 - **Session Duration**: X hours/minutes of conversation
 - **Context**: What prompted this session
+- **Cumulative Progress**: What has been built/achieved over multiple sessions
+- **Ongoing Projects**: Active work streams and their status
+- **Key Decisions Made**: Architecture choices that affect future work
 
-## User-Assistant Exchange Sequence
-[Every prompt and response with timestamps]
+### Current Session Context
+- **Session Goals**: What we set out to accomplish
+- **Workspace State**: Files open, git status, active projects
+- **Technical Environment**: Tools, frameworks, configurations in use
 
-## Research Process Documentation
-### Searches Conducted:
-- Tool: [github_repo/semantic_search/etc.]
-- Query: "exact search terms"
-- Source: [URL/file path/repository]
-- Results: [key findings]
-- Impact: [how this influenced conclusions]
+## THINKING (Assistant Reasoning Process)
+### Research Process Documentation
+#### Searches Conducted:
+- **Tool**: [github_repo/semantic_search/etc.]
+- **Query**: "exact search terms"
+- **Source**: [URL/file path/repository]
+- **Results**: [key findings]
+- **Reasoning**: [why this search was needed]
+- **Impact**: [how this influenced conclusions]
 
-## Technical Implementation
-[Files created, code changes, decisions made]
+#### Analysis and Synthesis:
+- **Problem Identification**: How issues were recognized
+- **Strategy Evolution**: How approaches changed through conversation
+- **Knowledge Synthesis**: How multiple sources combined into insights
+- **Decision Reasoning**: Why specific technical choices were made
 
-## Collaborative Insights
-[Breakthrough moments, joint discoveries]
+#### Collaborative Discoveries:
+- **Breakthrough Moments**: When new insights emerged
+- **Joint Problem-Solving**: How user and assistant built ideas together
+- **Conceptual Evolution**: How understanding developed through dialogue
 
-## Session Significance
-[Why this conversation matters for future reference]
+## VERBATIM MESSAGES
+### Complete User-Assistant Exchange Sequence
+```
+[Timestamp] USER: [exact user prompt/question]
+[Timestamp] ASSISTANT: [complete assistant response]
+[Timestamp] USER: [next user prompt]
+[Timestamp] ASSISTANT: [next assistant response]
+...
+```
+
+### Message Analysis
+- **Key Exchanges**: Most important question-answer pairs
+- **Turning Points**: Messages that changed direction or understanding
+- **Follow-up Chains**: How topics evolved through multiple exchanges
+
+## TECHNICAL IMPLEMENTATION
+### Files Created/Modified:
+- **File**: [path/filename]
+- **Purpose**: [why this file was created/changed]
+- **Key Changes**: [what was implemented]
+- **Dependencies**: [what this affects or depends on]
+
+### Architecture Decisions:
+- **Decision**: [what was decided]
+- **Rationale**: [why this choice was made]
+- **Alternatives**: [what other options were considered]
+- **Impact**: [how this affects the project]
+
+### Code Patterns and Solutions:
+- **Pattern**: [reusable code or approach]
+- **Use Case**: [when to apply this pattern]
+- **Benefits**: [why this pattern is valuable]
+
+## SESSION SIGNIFICANCE
+### Immediate Value:
+- **Problems Solved**: What issues were resolved
+- **Knowledge Gained**: New understanding acquired
+- **Tools/Techniques Learned**: New capabilities developed
+
+### Future Reference Value:
+- **Reusable Insights**: What can be applied to future work
+- **Decision Context**: Background for future architectural choices
+- **Research Patterns**: Successful approaches to finding information
+- **Collaboration Patterns**: Effective human-AI working methods
+
+### Next Session Preparation:
+- **Open Questions**: What still needs to be explored
+- **Planned Next Steps**: What should be tackled in future sessions
+- **Context for Continuation**: What the next session should know
 ```
 
 ## Revolutionary Context Memory Tools
