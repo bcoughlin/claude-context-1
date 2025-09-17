@@ -57,10 +57,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register configuration changes listener
         vscode.workspace.onDidChangeConfiguration((event) => {
-            if (event.affectsConfiguration('claudeMemory.embeddingProvider') ||
-                event.affectsConfiguration('claudeMemory.milvus') ||
-                event.affectsConfiguration('claudeMemory.splitter') ||
-                event.affectsConfiguration('claudeMemory.autoSync')) {
+            if (event.affectsConfiguration('vectorMemory.embeddingProvider') ||
+                event.affectsConfiguration('vectorMemory.milvus') ||
+                event.affectsConfiguration('vectorMemory.splitter') ||
+                event.affectsConfiguration('vectorMemory.autoSync')) {
                 console.log('Context configuration changed, reloading...');
                 reloadContextConfiguration();
             }
@@ -74,7 +74,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
 
         // Register existing semantic search commands
-        vscode.commands.registerCommand('claudeMemory.semanticSearch', () => {
+        vscode.commands.registerCommand('vectorMemory.semanticSearch', () => {
             // Get selected text from active editor and track the search
             const editor = vscode.window.activeTextEditor;
             const selectedText = editor?.document.getText(editor.selection);
@@ -93,7 +93,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
             return searchCommand.execute(selectedText);
         }),
-        vscode.commands.registerCommand('claudeMemory.indexThread', () => {
+        vscode.commands.registerCommand('vectorMemory.indexThread', () => {
             // Record indexing operation
             chatInterceptor.recordSearchOperation({
                 tool: 'Index Current Thread',
@@ -105,8 +105,8 @@ export async function activate(context: vscode.ExtensionContext) {
             });
             return indexCommand.execute();
         }),
-        vscode.commands.registerCommand('claudeMemory.clearIndex', () => indexCommand.clearIndex()),
-        vscode.commands.registerCommand('claudeMemory.reloadConfiguration', () => reloadContextConfiguration()),
+        vscode.commands.registerCommand('vectorMemory.clearIndex', () => indexCommand.clearIndex()),
+        vscode.commands.registerCommand('vectorMemory.reloadConfiguration', () => reloadContextConfiguration()),
 
         // Register token monitoring commands
         vscode.commands.registerCommand('claude-context.showTokenStats', () => tokenMonitor.showDetailedStats()),
@@ -144,7 +144,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusBarItem.text = `$(search) Context`;
     statusBarItem.tooltip = 'Click to open semantic search';
-    statusBarItem.command = 'claudeMemory.semanticSearch';
+    statusBarItem.command = 'vectorMemory.semanticSearch';
     statusBarItem.show();
 
     context.subscriptions.push(statusBarItem);
@@ -162,7 +162,7 @@ async function runInitialSync() {
 }
 
 function setupAutoSync() {
-    const config = vscode.workspace.getConfiguration('claudeMemory');
+    const config = vscode.workspace.getConfiguration('vectorMemory');
     const autoSyncEnabled = config.get<boolean>('autoSync.enabled', true);
     const autoSyncInterval = config.get<number>('autoSync.intervalMinutes', 5);
 

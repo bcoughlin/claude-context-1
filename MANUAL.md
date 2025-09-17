@@ -1,8 +1,8 @@
-# Claude Memory - User Manual
+# Vector Long-Term Memory for VSCode - User Manual
 
 ## Overview
 
-Claude Memory is an enhanced VS Code extension that provides thread-aware code indexing and search capabilities. Each conversation thread gets its own isolated collection in Zilliz, enabling context-specific code search and indexing.
+Vector Long-Term Memory for VSCode is an enhanced VS Code extension that provides thread-aware code indexing and search capabilities. Each conversation thread gets its own isolated collection in Zilliz, enabling context-specific code search and indexing with long-term persistence.
 
 ## Prerequisites
 
@@ -56,9 +56,30 @@ pnpm add -g @vscode/vsce
 # Package the extension
 cd packages/vscode-extension
 pnpm run package
+```
 
-# Install the .vsix file
-code --install-extension claude-memory-*.vsix
+**Install the Extension** (choose one method):
+
+**Option 1: Using VS Code UI (Recommended)**
+1. Open VS Code
+2. Press `Cmd+Shift+P` to open Command Palette
+3. Type "Extensions: Install from VSIX..."
+4. Select the `vector-memory-vscode-0.1.3.vsix` file
+5. Click "Install"
+
+**Option 2: Setup code command first, then install**
+```bash
+# Setup the 'code' command (one-time setup)
+# In VS Code: Cmd+Shift+P > "Shell Command: Install 'code' command in PATH"
+
+# Then install the extension
+code --install-extension vector-memory-vscode-0.1.3.vsix
+```
+
+**Option 3: Direct path to VS Code**
+```bash
+# macOS - install directly using full path
+/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code --install-extension vector-memory-vscode-0.1.3.vsix
 ```
 
 **Alternative**: If you prefer not to install vsce globally:
@@ -67,9 +88,18 @@ code --install-extension claude-memory-*.vsix
 cd packages/vscode-extension
 npx @vscode/vsce package
 
-# Install the .vsix file
-code --install-extension claude-memory-*.vsix
+# Then install using one of the methods above
 ```
+
+### VS Code Command Setup (Optional)
+
+To use the `code` command in terminal:
+1. Open VS Code
+2. Press `Cmd+Shift+P` (Command Palette)
+3. Type and select: **"Shell Command: Install 'code' command in PATH"**
+4. Restart your terminal
+
+Once set up, you can use `code .` to open current directory in VS Code.
 
 ### 3. Configure MCP Servers
 
@@ -101,12 +131,39 @@ Ensure you have the following MCP servers configured in your Claude Desktop or M
 }
 ```
 
+## Quick Start
+
+### Verify Installation
+After installing the extension:
+
+1. **Open VS Code**
+2. **Press `Cmd+Shift+P`** (or `Ctrl+Shift+P` on Windows/Linux) to open Command Palette  
+3. **Type "Vector Memory"** - you should see:
+   - `Vector Memory: Index Current Thread`
+   - `Vector Memory: Semantic Search`
+   - `Vector Memory: Clear Index`
+
+If these commands appear, the extension is successfully installed! ✅
+
+### First-Time Setup Test
+1. **Open a codebase** in VS Code
+2. **Press `Cmd+Shift+P`** and run `Vector Memory: Index Current Thread`
+3. **Select your project folder** when prompted
+4. **Wait for indexing** to complete (progress shown in status bar)
+5. **Test search**: Run `Vector Memory: Semantic Search` and try a query like "function to handle user input"
+
+### What You Get
+- **Thread Isolation**: Each conversation thread gets its own vector collection in Zilliz
+- **Persistent Memory**: Collections survive VS Code restarts and persist long-term
+- **Semantic Search**: Natural language code search within current thread's context
+- **Zero Cross-Contamination**: Thread A's results never appear in Thread B's searches
+
 ## Usage
 
 ### Thread-Aware Indexing
 
 1. **Open Command Palette** (`Cmd+Shift+P` / `Ctrl+Shift+P`)
-2. **Run Command**: `Claude Memory: Index Current Thread`
+2. **Run Command**: `Vector Memory: Index Current Thread`
 3. **Select Folder**: Choose the codebase directory to index
 4. **Confirm**: Click "Yes" to start indexing
 
@@ -118,7 +175,7 @@ Ensure you have the following MCP servers configured in your Claude Desktop or M
 ### Semantic Search
 
 1. **Open Command Palette**
-2. **Run Command**: `Claude Memory: Semantic Search`  
+2. **Run Command**: `Vector Memory: Semantic Search`  
 3. **Enter Query**: Natural language search query
 4. **Browse Results**: Click on results to open files
 
@@ -158,6 +215,13 @@ Ensure you have the following MCP servers configured in your Claude Desktop or M
 - **Status Updates**: Clear success/error messages
 
 ## Troubleshooting
+
+### VS Code Command Setup Issues
+1. **"code: command not found"**: The VS Code CLI isn't in your PATH
+   - **Solution**: Open VS Code → `Cmd+Shift+P` → "Shell Command: Install 'code' command in PATH"
+   - **Alternative**: Use full path: `/Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin/code --install-extension filename.vsix`
+2. **Extension not installing**: Permission or path issues
+   - **Solution**: Use VS Code UI instead: `Cmd+Shift+P` → "Extensions: Install from VSIX..."
 
 ### Extension Not Appearing
 1. **Check Installation**: Verify extension is installed in VS Code
@@ -212,8 +276,8 @@ Ensure you have the following MCP servers configured in your Claude Desktop or M
 ### Extension Settings
 ```json
 {
-  "claudeMemory.maxResults": 50,
-  "claudeMemory.threshold": 0.3
+  "vectorMemory.maxResults": 50,
+  "vectorMemory.threshold": 0.3
 }
 ```
 

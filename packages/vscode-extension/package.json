@@ -1,8 +1,8 @@
 {
-    "name": "claude-memory",
-    "displayName": "Claude Memory",
+    "name": "vector-memory-vscode",
+    "displayName": "Vector Long-Term Memory for VSCode",
     "publisher": "zilliz",
-    "description": "Thread-aware code indexing and memory management for Claude",
+    "description": "Thread-aware vector memory and code indexing with long-term persistence",
     "version": "0.1.3",
     "private": true,
     "engines": {
@@ -32,19 +32,19 @@
     "contributes": {
         "commands": [
             {
-                "command": "claudeMemory.semanticSearch",
+                "command": "vectorMemory.semanticSearch",
                 "title": "Semantic Search",
-                "category": "Claude Memory"
+                "category": "Vector Memory"
             },
             {
-                "command": "claudeMemory.indexThread",
+                "command": "vectorMemory.indexThread",
                 "title": "Index Current Thread",
-                "category": "Claude Memory"
+                "category": "Vector Memory"
             },
             {
-                "command": "claudeMemory.clearIndex",
+                "command": "vectorMemory.clearIndex",
                 "title": "Clear Index",
-                "category": "Claude Memory"
+                "category": "Vector Memory"
             },
             {
                 "command": "claude-context.showTokenStats",
@@ -179,11 +179,39 @@
                         "Ollama",
                         "Gemini"
                     ],
+                    "enumDescriptions": [
+                        "OpenAI: Most popular, reliable embeddings (requires API key)",
+                        "VoyageAI: Specialized for code and technical content (requires API key)",
+                        "Ollama: Run models locally, no API key needed (requires Ollama installed)",
+                        "Gemini: Google's embedding service (requires API key)"
+                    ],
+                    "default": "OpenAI",
                     "description": "Embedding service provider"
                 },
                 "semanticCodeSearch.embeddingProvider.model": {
                     "type": "string",
-                    "description": "Embedding model to use"
+                    "enum": [
+                        "text-embedding-3-small",
+                        "text-embedding-3-large",
+                        "text-embedding-ada-002",
+                        "voyage-code-2",
+                        "voyage-large-2-instruct",
+                        "text-embedding-004",
+                        "nomic-embed-text",
+                        "mxbai-embed-large"
+                    ],
+                    "enumDescriptions": [
+                        "OpenAI: Recommended - Good performance, lower cost (1536 dimensions)",
+                        "OpenAI: Best performance, higher cost (3072 dimensions)",
+                        "OpenAI: Legacy model, still supported (1536 dimensions)",
+                        "VoyageAI: Optimized for code understanding (1536 dimensions)",
+                        "VoyageAI: Large instruct model (1024 dimensions)",
+                        "Gemini: Google's latest embedding model (768 dimensions)",
+                        "Ollama: Local embedding model (768 dimensions)",
+                        "Ollama: Large local embedding model (1024 dimensions)"
+                    ],
+                    "default": "text-embedding-3-small",
+                    "description": "Embedding model to use - varies by provider"
                 },
                 "semanticCodeSearch.embeddingProvider.apiKey": {
                     "type": "string",

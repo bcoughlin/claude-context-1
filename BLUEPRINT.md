@@ -1,8 +1,8 @@
-# Claude Memory - Technical Blueprint
+# Vector Long-Term Memory for VSCode - Technical Blueprint
 
 ## Architecture Overview
 
-Claude Memory enhances the original claude-context system with thread-aware indexing capabilities. The system consists of three main components working together to provide isolated, thread-specific code search and indexing.
+Vector Long-Term Memory for VSCode enhances the original claude-context system with thread-aware indexing capabilities. The system consists of three main components working together to provide isolated, thread-specific code search and indexing with persistent vector storage.
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
