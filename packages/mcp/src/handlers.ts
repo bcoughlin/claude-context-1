@@ -950,10 +950,10 @@ export class ToolHandlers {
             console.log(`[MEMORY] Bootstrapping context for: "${query}"`);
 
             const result = await this.conversationMemory.bootstrapContext(query, { project });
-            
+
             let responseText = `🚀 Context Bootstrap Results:\n\n`;
             responseText += `**Context Summary:**\n${result.contextSummary}\n\n`;
-            
+
             if (result.relevantSessions.length > 0) {
                 responseText += `**Relevant Sessions Found:** ${result.relevantSessions.length}\n\n`;
                 result.relevantSessions.forEach((searchResult: any, idx: number) => {
@@ -963,7 +963,7 @@ export class ToolHandlers {
                     responseText += `   **Context:** ${searchResult.context.substring(0, 100)}...\n\n`;
                 });
             }
-            
+
             if (result.suggestedActions.length > 0) {
                 responseText += `**Suggested Actions:**\n`;
                 result.suggestedActions.forEach((action: string, idx: number) => {

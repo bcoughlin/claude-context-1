@@ -3,6 +3,10 @@ node_modules/
 *.pnp
 .pnp.js
 
+# Lock files (using pnpm)
+package-lock.json
+yarn.lock
+
 # Production builds
 dist/
 build/
