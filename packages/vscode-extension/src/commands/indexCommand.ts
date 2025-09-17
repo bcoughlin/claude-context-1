@@ -1,12 +1,15 @@
 import * as vscode from 'vscode';
 import { Context } from '@zilliz/claude-context-core';
 import * as path from 'path';
+import { MCPContextManager } from '../monitoring/mcpContextManager';
 
 export class IndexCommand {
     private context: Context;
+    private mcpContextManager?: MCPContextManager;
 
-    constructor(context: Context) {
+    constructor(context: Context, mcpContextManager?: MCPContextManager) {
         this.context = context;
+        this.mcpContextManager = mcpContextManager;
     }
 
     /**
@@ -44,7 +47,7 @@ export class IndexCommand {
         }
 
         const confirm = await vscode.window.showInformationMessage(
-            `Index codebase at: ${selectedFolder.uri.fsPath}?\n\nThis will create embeddings for all supported code files.`,
+            `Index thread context for: ${selectedFolder.uri.fsPath}?\n\nThis will create embeddings for all supported code files in this thread.`,
             'Yes',
             'Cancel'
         );
@@ -58,7 +61,7 @@ export class IndexCommand {
 
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: 'Indexing Codebase',
+                title: 'Indexing Thread Context',
                 cancellable: false
             }, async (progress) => {
                 let lastPercentage = 0;
@@ -77,12 +80,27 @@ export class IndexCommand {
                 const { FileSynchronizer } = await import("@zilliz/claude-context-core");
                 const synchronizer = new FileSynchronizer(selectedFolder.uri.fsPath, this.context.getIgnorePatterns() || []);
                 await synchronizer.initialize();
-                // Store synchronizer in the context's internal map using the collection name from context
-                await this.context.getPreparedCollection(selectedFolder.uri.fsPath);
-                const collectionName = this.context.getCollectionName(selectedFolder.uri.fsPath);
+
+                // Get current thread context for collection description and thread-specific indexing
+                const currentThread = this.mcpContextManager?.getCurrentThread();
+                const collectionDescription = currentThread?.threadTitle ?
+                    `Thread: ${currentThread.threadTitle}` :
+                    undefined;
+                const threadId = currentThread?.threadId || undefined;
+
+                console.log('IndexCommand: Thread context for collection description:', {
+                    hasContextManager: !!this.mcpContextManager,
+                    threadId: currentThread?.threadId,
+                    threadTitle: currentThread?.threadTitle,
+                    collectionDescription
+                });
+
+                // Store synchronizer in the context's internal map using the thread-aware collection name
+                await this.context.getPreparedCollection(selectedFolder.uri.fsPath, threadId);
+                const collectionName = this.context.getCollectionName(selectedFolder.uri.fsPath, threadId);
                 this.context.setSynchronizer(collectionName, synchronizer);
 
-                // Start indexing with progress callback
+                // Start indexing with progress callback, thread-aware description, and thread ID
                 indexStats = await this.context.indexCodebase(
                     selectedFolder.uri.fsPath,
                     (progressInfo) => {
@@ -94,7 +112,10 @@ export class IndexCommand {
                             increment: increment,
                             message: progressInfo.phase
                         });
-                    }
+                    },
+                    false, // forceReindex
+                    collectionDescription, // Custom description with thread context
+                    threadId // Thread ID for thread-specific collections
                 );
             });
 
@@ -106,7 +127,7 @@ export class IndexCommand {
                     );
                 } else {
                     vscode.window.showInformationMessage(
-                        `✅ Indexing complete!\n\nIndexed ${indexedFiles} files with ${totalChunks} code chunks.\n\nYou can now use semantic search.`
+                        `✅ Thread index complete!\n\nIndexed ${indexedFiles} files with ${totalChunks} code chunks.\n\nYou can now use semantic search within this thread.`
                     );
                 }
             }

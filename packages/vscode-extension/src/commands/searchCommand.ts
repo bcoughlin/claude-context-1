@@ -1,12 +1,15 @@
 import * as vscode from 'vscode';
 import { Context, SearchQuery, SemanticSearchResult } from '@zilliz/claude-context-core';
 import * as path from 'path';
+import { MCPContextManager } from '../monitoring/mcpContextManager';
 
 export class SearchCommand {
     private context: Context;
+    private mcpContextManager: MCPContextManager;
 
-    constructor(context: Context) {
+    constructor(context: Context, mcpContextManager: MCPContextManager) {
         this.context = context;
+        this.mcpContextManager = mcpContextManager;
     }
 
     /**
@@ -96,12 +99,17 @@ export class SearchCommand {
                 console.log('🔍 Using semantic search...');
                 progress.report({ increment: 50, message: 'Executing semantic search...' });
 
+                // Get thread context for thread-specific search
+                const currentThread = this.mcpContextManager.getCurrentThread();
+                const threadId = currentThread?.threadId || undefined;
+
                 let results = await this.context.semanticSearch(
                     codebasePath,
                     query.term,
                     query.limit || 20,
                     0.3, // similarity threshold
-                    filterExpr
+                    filterExpr,
+                    threadId // Use thread-specific collection
                 );
                 // No client-side filtering; filter pushed down via filter expression
 
@@ -193,12 +201,17 @@ export class SearchCommand {
             filterExpr = `fileExtension in [${quoted}]`;
         }
 
+        // Get thread context for thread-specific search
+        const currentThread = this.mcpContextManager.getCurrentThread();
+        const threadId = currentThread?.threadId || undefined;
+
         let results = await this.context.semanticSearch(
             codebasePath,
             searchTerm,
             limit,
             0.3, // similarity threshold
-            filterExpr
+            filterExpr,
+            threadId // Use thread-specific collection
         );
         return results;
     }

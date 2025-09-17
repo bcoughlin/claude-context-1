@@ -28,14 +28,11 @@ import { MilvusVectorDatabase } from "@zilliz/claude-context-core";
 import { createMcpConfig, logConfigurationSummary, showHelpMessage, ContextMcpConfig } from "./config.js";
 import { createEmbeddingInstance, logEmbeddingProviderInfo } from "./embedding.js";
 import { SnapshotManager } from "./snapshot.js";
-import { SyncManager } from "./sync.js";
 import { ToolHandlers } from "./handlers.js";
 
 class ContextMcpServer {
     private server: Server;
-    private context: Context;
     private snapshotManager: SnapshotManager;
-    private syncManager: SyncManager;
     private toolHandlers: ToolHandlers;
 
     constructor(config: ContextMcpConfig) {
@@ -59,237 +56,34 @@ class ContextMcpServer {
         const embedding = createEmbeddingInstance(config);
         logEmbeddingProviderInfo(config, embedding);
 
-        // Initialize vector database
+        // Initialize vector database (for conversation memory only)
         const vectorDatabase = new MilvusVectorDatabase({
             address: config.milvusAddress,
             ...(config.milvusToken && { token: config.milvusToken })
         });
 
-        // Initialize Claude Context
-        this.context = new Context({
+        // Initialize managers (memory-focused only)
+        this.snapshotManager = new SnapshotManager();
+
+        // Create a minimal Context for memory operations only
+        const memoryContext = new Context({
             embedding,
             vectorDatabase
         });
 
-        // Initialize managers
-        this.snapshotManager = new SnapshotManager();
-        this.syncManager = new SyncManager(this.context, this.snapshotManager);
-        this.toolHandlers = new ToolHandlers(this.context, this.snapshotManager);
+        this.toolHandlers = new ToolHandlers(memoryContext, this.snapshotManager);
 
-        // Load existing codebase snapshot on startup
+        // Load existing conversation sessions on startup
         this.snapshotManager.loadCodebaseSnapshot();
 
         this.setupTools();
     }
 
     private setupTools() {
-        const index_description = `
-Index a codebase directory to enable semantic search using a configurable code splitter.
-
-⚠️ **IMPORTANT**:
-- You MUST provide an absolute path to the target codebase.
-
-✨ **Usage Guidance**:
-- This tool is typically used when search fails due to an unindexed codebase.
-- If indexing is attempted on an already indexed path, and a conflict is detected, you MUST prompt the user to confirm whether to proceed with a force index (i.e., re-indexing and overwriting the previous index).
-`;
-
-
-        const search_description = `
-Search the indexed codebase using natural language queries within a specified absolute path.
-
-⚠️ **IMPORTANT**:
-- You MUST provide an absolute path.
-
-🎯 **When to Use**:
-This tool is versatile and can be used before completing various tasks to retrieve relevant context:
-- **Code search**: Find specific functions, classes, or implementations
-- **Context-aware assistance**: Gather relevant code context before making changes
-- **Issue identification**: Locate problematic code sections or bugs
-- **Code review**: Understand existing implementations and patterns
-- **Refactoring**: Find all related code pieces that need to be updated
-- **Feature development**: Understand existing architecture and similar implementations
-- **Duplicate detection**: Identify redundant or duplicated code patterns across the codebase
-
-✨ **Usage Guidance**:
-- If the codebase is not indexed, this tool will return a clear error message indicating that indexing is required first.
-- You can then use the index_codebase tool to index the codebase before searching again.
-`;
-
-        // Define available tools
+        // Define available tools (memory-focused only)
         this.server.setRequestHandler(ListToolsRequestSchema, async () => {
             return {
                 tools: [
-                    {
-                        name: "index_codebase",
-                        description: index_description,
-                        inputSchema: {
-                            type: "object",
-                            properties: {
-                                path: {
-                                    type: "string",
-                                    description: `ABSOLUTE path to the codebase directory to index.`
-                                },
-                                force: {
-                                    type: "boolean",
-                                    description: "Force re-indexing even if already indexed",
-                                    default: false
-                                },
-                                splitter: {
-                                    type: "string",
-                                    description: "Code splitter to use: 'ast' for syntax-aware splitting with automatic fallback, 'langchain' for character-based splitting",
-                                    enum: ["ast", "langchain"],
-                                    default: "ast"
-                                },
-                                customExtensions: {
-                                    type: "array",
-                                    items: {
-                                        type: "string"
-                                    },
-                                    description: "Optional: Additional file extensions to include beyond defaults (e.g., ['.vue', '.svelte', '.astro']). Extensions should include the dot prefix or will be automatically added",
-                                    default: []
-                                },
-                                ignorePatterns: {
-                                    type: "array",
-                                    items: {
-                                        type: "string"
-                                    },
-                                    description: "Optional: Additional ignore patterns to exclude specific files/directories beyond defaults. Only include this parameter if the user explicitly requests custom ignore patterns (e.g., ['static/**', '*.tmp', 'private/**'])",
-                                    default: []
-                                }
-                            },
-                            required: ["path"]
-                        }
-                    },
-                    {
-                        name: "search_code",
-                        description: search_description,
-                        inputSchema: {
-                            type: "object",
-                            properties: {
-                                path: {
-                                    type: "string",
-                                    description: `ABSOLUTE path to the codebase directory to search in.`
-                                },
-                                query: {
-                                    type: "string",
-                                    description: "Natural language query to search for in the codebase"
-                                },
-                                limit: {
-                                    type: "number",
-                                    description: "Maximum number of results to return",
-                                    default: 10,
-                                    maximum: 50
-                                },
-                                extensionFilter: {
-                                    type: "array",
-                                    items: {
-                                        type: "string"
-                                    },
-                                    description: "Optional: List of file extensions to filter results. (e.g., ['.ts','.py']).",
-                                    default: []
-                                }
-                            },
-                            required: ["path", "query"]
-                        }
-                    },
-                    {
-                        name: "clear_index",
-                        description: `Clear the search index. IMPORTANT: You MUST provide an absolute path.`,
-                        inputSchema: {
-                            type: "object",
-                            properties: {
-                                path: {
-                                    type: "string",
-                                    description: `ABSOLUTE path to the codebase directory to clear.`
-                                }
-                            },
-                            required: ["path"]
-                        }
-                    },
-                    {
-                        name: "get_indexing_status",
-                        description: `Get the current indexing status of a codebase. Shows progress percentage for actively indexing codebases and completion status for indexed codebases.`,
-                        inputSchema: {
-                            type: "object",
-                            properties: {
-                                path: {
-                                    type: "string",
-                                    description: `ABSOLUTE path to the codebase directory to check status for.`
-                                }
-                            },
-                            required: ["path"]
-                        }
-                    },
-                    {
-                        name: "store_conversation",
-                        description: "Store a conversation session in memory for future retrieval",
-                        inputSchema: {
-                            type: "object",
-                            properties: {
-                                conversationData: {
-                                    type: ["string", "object"],
-                                    description: "Either a conversation summary string or a complete ConversationSession object with id, title, summary, etc."
-                                },
-                                project: {
-                                    type: "string",
-                                    description: "Optional: Project name to associate with this conversation"
-                                }
-                            },
-                            required: ["conversationData"]
-                        }
-                    },
-                    {
-                        name: "search_memory",
-                        description: "Search conversation memory for relevant past discussions",
-                        inputSchema: {
-                            type: "object",
-                            properties: {
-                                query: {
-                                    type: "string",
-                                    description: "Search query to find relevant conversations"
-                                },
-                                project: {
-                                    type: "string",
-                                    description: "Optional: Filter by project name"
-                                },
-                                limit: {
-                                    type: "number",
-                                    description: "Maximum number of results to return",
-                                    default: 5,
-                                    maximum: 20
-                                },
-                                minRelevance: {
-                                    type: "number",
-                                    description: "Minimum relevance score (0.0-1.0)",
-                                    default: 0.3,
-                                    minimum: 0.0,
-                                    maximum: 1.0
-                                }
-                            },
-                            required: ["query"]
-                        }
-                    },
-                    {
-                        name: "list_sessions",
-                        description: "List stored conversation sessions",
-                        inputSchema: {
-                            type: "object",
-                            properties: {
-                                project: {
-                                    type: "string",
-                                    description: "Optional: Filter by project name"
-                                },
-                                limit: {
-                                    type: "number",
-                                    description: "Maximum number of sessions to return",
-                                    default: 10,
-                                    maximum: 50
-                                }
-                            },
-                            required: []
-                        }
-                    },
                     {
                         name: "bootstrap_context",
                         description: "Bootstrap context for a new session by searching relevant conversation history",
@@ -308,41 +102,101 @@ This tool is versatile and can be used before completing various tasks to retrie
                             required: ["query"]
                         }
                     },
+                    {
+                        name: "list_sessions",
+                        description: "List stored conversation sessions",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                limit: {
+                                    type: "number",
+                                    description: "Maximum number of sessions to return",
+                                    default: 10,
+                                    maximum: 50
+                                },
+                                project: {
+                                    type: "string",
+                                    description: "Optional: Filter by project name"
+                                }
+                            },
+                            required: []
+                        }
+                    },
+                    {
+                        name: "search_memory",
+                        description: "Search conversation memory for relevant past discussions",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                query: {
+                                    type: "string",
+                                    description: "Search query to find relevant conversations"
+                                },
+                                limit: {
+                                    type: "number",
+                                    description: "Maximum number of results to return",
+                                    default: 5,
+                                    maximum: 20
+                                },
+                                minRelevance: {
+                                    type: "number",
+                                    description: "Minimum relevance score (0.0-1.0)",
+                                    default: 0.3,
+                                    minimum: 0,
+                                    maximum: 1
+                                },
+                                project: {
+                                    type: "string",
+                                    description: "Optional: Filter by project name"
+                                }
+                            },
+                            required: ["query"]
+                        }
+                    },
+                    {
+                        name: "store_conversation",
+                        description: "Store a conversation session in memory for future retrieval",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                conversationData: {
+                                    description: "Either a conversation summary string or a complete ConversationSession object with id, title, summary, etc.",
+                                    type: ["string", "object"]
+                                },
+                                project: {
+                                    type: "string",
+                                    description: "Optional: Project name to associate with this conversation"
+                                }
+                            },
+                            required: ["conversationData"]
+                        }
+                    }
                 ]
             };
         });
 
-        // Handle tool execution
+        // Handle tool execution (memory tools only)
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const { name, arguments: args } = request.params;
 
             switch (name) {
-                case "index_codebase":
-                    return await this.toolHandlers.handleIndexCodebase(args);
-                case "search_code":
-                    return await this.toolHandlers.handleSearchCode(args);
-                case "clear_index":
-                    return await this.toolHandlers.handleClearIndex(args);
-                case "get_indexing_status":
-                    return await this.toolHandlers.handleGetIndexingStatus(args);
-                case "store_conversation":
-                    if (!args || typeof args !== 'object' || !('conversationData' in args)) {
-                        throw new Error('store_conversation requires conversationData argument');
-                    }
-                    return await this.toolHandlers.storeConversation(args.conversationData as any);
-                case "search_memory":
-                    if (!args || typeof args !== 'object' || !('query' in args)) {
-                        throw new Error('search_memory requires query argument');
-                    }
-                    return await this.toolHandlers.searchMemory(args.query as string, args as any);
-                case "list_sessions":
-                    return await this.toolHandlers.listSessions(args as any);
                 case "bootstrap_context":
                     if (!args || typeof args !== 'object' || !('query' in args)) {
                         throw new Error('bootstrap_context requires query argument');
                     }
                     return await this.toolHandlers.bootstrapContext(args.query as string, (args as any).project);
-
+                case "list_sessions":
+                    return await this.toolHandlers.listSessions(args as any);
+                case "search_memory":
+                    if (!args || typeof args !== 'object' || !('query' in args)) {
+                        throw new Error('search_memory requires query argument');
+                    }
+                    return await this.toolHandlers.searchMemory(args.query as string, args as any);
+                case "store_conversation":
+                    if (!args || typeof args !== 'object' || !('conversationData' in args)) {
+                        throw new Error('store_conversation requires conversationData argument');
+                    }
+                    return await this.toolHandlers.storeConversation(args.conversationData as any);
                 default:
                     throw new Error(`Unknown tool: ${name}`);
             }
@@ -350,20 +204,14 @@ This tool is versatile and can be used before completing various tasks to retrie
     }
 
     async start() {
-        console.log('[SYNC-DEBUG] MCP server start() method called');
-        console.log('Starting Context MCP server...');
+        console.log('Starting Context MCP Memory server...');
 
         const transport = new StdioServerTransport();
-        console.log('[SYNC-DEBUG] StdioServerTransport created, attempting server connection...');
-
         await this.server.connect(transport);
-        console.log("MCP server started and listening on stdio.");
-        console.log('[SYNC-DEBUG] Server connection established successfully');
+        console.log("MCP Memory server started and listening on stdio.");
 
-        // Start background sync after server is connected
-        console.log('[SYNC-DEBUG] Initializing background sync...');
-        this.syncManager.startBackgroundSync();
-        console.log('[SYNC-DEBUG] MCP server initialization complete');
+        // Memory server focuses on conversation management only
+        // Code indexing and sync handled by original claude-context server
     }
 }
 

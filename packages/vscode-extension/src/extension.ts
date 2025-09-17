@@ -8,6 +8,11 @@ import { ConfigManager } from './config/configManager';
 import { Context, OpenAIEmbedding, VoyageAIEmbedding, GeminiEmbedding, MilvusRestfulVectorDatabase, AstCodeSplitter, LangChainCodeSplitter, SplitterType } from '@zilliz/claude-context-core';
 import { envManager } from '@zilliz/claude-context-core';
 
+// Token monitoring imports
+import { TokenMonitor } from './monitoring/tokenMonitor';
+import { MCPContextManager } from './monitoring/mcpContextManager';
+import { ChatResponseInterceptor } from './monitoring/chatResponseInterceptor';
+
 let semanticSearchProvider: SemanticSearchViewProvider;
 let searchCommand: SearchCommand;
 let indexCommand: IndexCommand;
@@ -15,6 +20,11 @@ let syncCommand: SyncCommand;
 let configManager: ConfigManager;
 let codeContext: Context;
 let autoSyncDisposable: vscode.Disposable | null = null;
+
+// Token monitoring instances
+let tokenMonitor: TokenMonitor;
+let mcpContextManager: MCPContextManager;
+let chatInterceptor: ChatResponseInterceptor;
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Context extension is now active!');
@@ -25,9 +35,14 @@ export async function activate(context: vscode.ExtensionContext) {
     // Initialize shared context instance with embedding configuration
     codeContext = createContextWithConfig(configManager);
 
+    // Initialize token monitoring system
+    tokenMonitor = new TokenMonitor(context);
+    mcpContextManager = new MCPContextManager(context);
+    chatInterceptor = new ChatResponseInterceptor(tokenMonitor, context);
+
     // Initialize providers and commands
-    searchCommand = new SearchCommand(codeContext);
-    indexCommand = new IndexCommand(codeContext);
+    searchCommand = new SearchCommand(codeContext, mcpContextManager);
+    indexCommand = new IndexCommand(codeContext, mcpContextManager);
     syncCommand = new SyncCommand(codeContext);
     semanticSearchProvider = new SemanticSearchViewProvider(context.extensionUri, searchCommand, indexCommand, syncCommand, configManager);
 
@@ -40,7 +55,7 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        // Listen for configuration changes
+        // Register configuration changes listener
         vscode.workspace.onDidChangeConfiguration((event) => {
             if (event.affectsConfiguration('semanticCodeSearch.embeddingProvider') ||
                 event.affectsConfiguration('semanticCodeSearch.milvus') ||
@@ -49,18 +64,68 @@ export async function activate(context: vscode.ExtensionContext) {
                 console.log('Context configuration changed, reloading...');
                 reloadContextConfiguration();
             }
+
+            if (event.affectsConfiguration('claude-context')) {
+                console.log('Token monitoring configuration changed, reloading...');
+                // Recreate token monitor with new configuration
+                tokenMonitor.dispose();
+                tokenMonitor = new TokenMonitor(context);
+            }
         }),
 
-        // Register commands
+        // Register existing semantic search commands
         vscode.commands.registerCommand('semanticCodeSearch.semanticSearch', () => {
-            // Get selected text from active editor
+            // Get selected text from active editor and track the search
             const editor = vscode.window.activeTextEditor;
             const selectedText = editor?.document.getText(editor.selection);
+
+            // Record search operation for token monitoring
+            if (selectedText) {
+                chatInterceptor.recordSearchOperation({
+                    tool: 'Semantic Search',
+                    query: selectedText,
+                    source: 'VSCode Extension',
+                    results: 'Search executed',
+                    impact: 'Code search performed',
+                    timestamp: new Date()
+                });
+            }
+
             return searchCommand.execute(selectedText);
         }),
-        vscode.commands.registerCommand('semanticCodeSearch.indexCodebase', () => indexCommand.execute()),
+        vscode.commands.registerCommand('semanticCodeSearch.indexThread', () => {
+            // Record indexing operation
+            chatInterceptor.recordSearchOperation({
+                tool: 'Index Current Thread',
+                query: 'Thread-specific indexing',
+                source: 'VSCode Extension',
+                results: 'Indexing started',
+                impact: 'Codebase indexed for search',
+                timestamp: new Date()
+            });
+            return indexCommand.execute();
+        }),
         vscode.commands.registerCommand('semanticCodeSearch.clearIndex', () => indexCommand.clearIndex()),
-        vscode.commands.registerCommand('semanticCodeSearch.reloadConfiguration', () => reloadContextConfiguration())
+        vscode.commands.registerCommand('semanticCodeSearch.reloadConfiguration', () => reloadContextConfiguration()),
+
+        // Register token monitoring commands
+        vscode.commands.registerCommand('claude-context.showTokenStats', () => tokenMonitor.showDetailedStats()),
+        vscode.commands.registerCommand('claude-context.storeContext', () => tokenMonitor.storeCurrentContext()),
+        vscode.commands.registerCommand('claude-context.resetCounter', () => tokenMonitor.resetTokenCounter()),
+        vscode.commands.registerCommand('claude-context.manageContext', () => showContextManagementOptions()),
+        vscode.commands.registerCommand('claude-context.searchMemory', () => searchConversationMemory()),
+        vscode.commands.registerCommand('claude-context.validateMCP', () => validateMCPConnection()),
+
+        // Register thread management commands
+        vscode.commands.registerCommand('claude-context.browseThreads', () => mcpContextManager.showThreadBrowser()),
+        vscode.commands.registerCommand('claude-context.searchThreads', () => searchThreads()),
+        vscode.commands.registerCommand('claude-context.newThread', () => createNewThread()),
+        vscode.commands.registerCommand('claude-context.showCurrentThread', () => showCurrentThread()),
+
+        // Register MCP storage handler
+        vscode.commands.registerCommand('claude-context.storeConversation', (snapshot) => {
+            return mcpContextManager.storeConversation(snapshot);
+        })
     ];
 
     context.subscriptions.push(...disposables);
@@ -70,6 +135,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Run initial sync on startup
     runInitialSync();
+
+    // Start token monitoring
+    chatInterceptor.startMonitoring();
+    console.log('Token monitoring system activated');
 
     // Show status bar item
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -241,6 +310,242 @@ function reloadContextConfiguration() {
     }
 }
 
+// Token monitoring helper functions
+async function showContextManagementOptions(): Promise<void> {
+    const options = [
+        'Show Token Statistics',
+        'Store Current Context',
+        'Reset Token Counter',
+        'Search Memory',
+        'Validate MCP Connection'
+    ];
+
+    const selection = await vscode.window.showQuickPick(options, {
+        placeHolder: 'Select a context management option'
+    });
+
+    switch (selection) {
+        case 'Show Token Statistics':
+            await tokenMonitor.showDetailedStats();
+            break;
+        case 'Store Current Context':
+            await tokenMonitor.storeCurrentContext();
+            break;
+        case 'Reset Token Counter':
+            await tokenMonitor.resetTokenCounter();
+            break;
+        case 'Search Memory':
+            await searchConversationMemory();
+            break;
+        case 'Validate MCP Connection':
+            await validateMCPConnection();
+            break;
+    }
+}
+
+async function searchConversationMemory(): Promise<void> {
+    const query = await vscode.window.showInputBox({
+        prompt: 'Search conversation memory',
+        placeHolder: 'Enter search query (e.g., "authentication system", "React components")'
+    });
+
+    if (!query) {
+        return;
+    }
+
+    try {
+        const results = await mcpContextManager.searchConversationMemory(query);
+
+        if (results.length === 0) {
+            vscode.window.showInformationMessage('No matching conversations found.');
+            return;
+        }
+
+        const formattedResults = `# Conversation Memory Search Results
+
+**Query**: "${query}"
+**Found**: ${results.length} matches
+
+${results.map((result, index) => `
+## Result ${index + 1}
+**Relevance**: ${result.score || 'N/A'}
+**Content**: ${result.content || result.summary || 'No content available'}
+**Timestamp**: ${result.timestamp ? new Date(result.timestamp).toLocaleString() : 'Unknown'}
+`).join('\n')}
+
+*Use "Claude Context: Bootstrap Context" to restore relevant context*
+`;
+
+        const document = await vscode.workspace.openTextDocument({
+            content: formattedResults,
+            language: 'markdown'
+        });
+
+        await vscode.window.showTextDocument(document);
+
+    } catch (error) {
+        vscode.window.showErrorMessage(`Memory search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function validateMCPConnection(): Promise<void> {
+    try {
+        const isValid = await mcpContextManager.validateMCPConnection();
+
+        if (isValid) {
+            vscode.window.showInformationMessage('✅ MCP connection is working correctly!');
+        } else {
+            vscode.window.showWarningMessage('⚠️ MCP connection failed. Check configuration and server status.');
+        }
+
+    } catch (error) {
+        vscode.window.showErrorMessage(`MCP validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+// Thread management helper functions
+async function searchThreads(): Promise<void> {
+    const query = await vscode.window.showInputBox({
+        prompt: 'Search conversation threads',
+        placeHolder: 'Enter search query (e.g., "backend", "VS Code extension")'
+    });
+
+    if (!query) {
+        return;
+    }
+
+    try {
+        const threads = await mcpContextManager.searchThreads(query);
+
+        if (threads.length === 0) {
+            vscode.window.showInformationMessage(`No threads found matching: "${query}"`);
+            return;
+        }
+
+        const threadItems = threads.map(thread => ({
+            label: thread.threadTitle,
+            description: `${thread.sessionCount} sessions, last: ${thread.lastActivity.toLocaleDateString()}`,
+            detail: thread.firstMessage,
+            threadId: thread.threadId
+        }));
+
+        const selected = await vscode.window.showQuickPick(threadItems, {
+            placeHolder: `Found ${threads.length} threads. Select one to restore:`
+        });
+
+        if (selected) {
+            await mcpContextManager.restoreThreadContext(selected.threadId);
+        }
+
+    } catch (error) {
+        vscode.window.showErrorMessage(`Thread search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function createNewThread(): Promise<void> {
+    const threadTitle = await vscode.window.showInputBox({
+        prompt: 'Create new conversation thread',
+        placeHolder: 'Enter thread title (e.g., "Checking if backend is running locally")',
+        validateInput: (value) => {
+            if (!value || value.trim().length === 0) {
+                return 'Thread title cannot be empty';
+            }
+            if (value.length > 100) {
+                return 'Thread title too long (max 100 characters)';
+            }
+            return null;
+        }
+    });
+
+    if (!threadTitle) {
+        return;
+    }
+
+    try {
+        // Force creation of new thread by clearing current context
+        const currentThread = mcpContextManager.getCurrentThread();
+
+        // Reset current thread to force new thread creation
+        await mcpContextManager.restoreThreadContext(''); // This will fail and prompt for new thread
+
+        // Initialize new thread with empty snapshot for now
+        await mcpContextManager.storeConversation({
+            tokenCount: 0,
+            sessionDuration: '0h 0m',
+            activeFiles: [],
+            gitStatus: 'Unknown',
+            searchResults: [],
+            messages: [],
+            filesModified: [],
+            workspaceContext: {}
+        }, threadTitle.trim());
+
+        vscode.window.showInformationMessage(`✅ New thread created: "${threadTitle}"`);
+
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to create new thread: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function showCurrentThread(): Promise<void> {
+    const currentThread = mcpContextManager.getCurrentThread();
+
+    if (!currentThread.threadId) {
+        const createNew = await vscode.window.showInformationMessage(
+            'No active thread. Would you like to create one?',
+            'Create Thread',
+            'Browse Existing'
+        );
+
+        if (createNew === 'Create Thread') {
+            await createNewThread();
+        } else if (createNew === 'Browse Existing') {
+            await mcpContextManager.showThreadBrowser();
+        }
+        return;
+    }
+
+    try {
+        const sessions = await mcpContextManager.getSessionsForThread(currentThread.threadId);
+
+        const threadInfo = `# Current Thread Context
+
+## Thread Information
+- **Title**: ${currentThread.threadTitle}
+- **Thread ID**: ${currentThread.threadId}
+- **Sessions**: ${sessions.length}
+- **Created**: ${sessions.length > 0 ? sessions[sessions.length - 1].timestamp.toLocaleString() : 'Unknown'}
+- **Last Activity**: ${sessions.length > 0 ? sessions[0].timestamp.toLocaleString() : 'Unknown'}
+
+## Recent Sessions
+${sessions.slice(0, 5).map((session, index) => `
+### Session ${index + 1}
+- **ID**: ${session.sessionId}
+- **Time**: ${session.timestamp.toLocaleString()}
+- **Tokens**: ${session.tokenCount.toLocaleString()}
+- **Summary**: ${session.summary}
+`).join('\n')}
+
+${sessions.length > 5 ? `\n*... and ${sessions.length - 5} more sessions*` : ''}
+
+## Actions
+- Use "Claude Context: Browse Threads" to switch threads
+- Use "Claude Context: Search Memory" to find specific content
+- Current token monitoring will automatically store to this thread
+`;
+
+        const document = await vscode.workspace.openTextDocument({
+            content: threadInfo,
+            language: 'markdown'
+        });
+
+        await vscode.window.showTextDocument(document);
+
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to show thread info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
 export function deactivate() {
     console.log('Context extension is now deactivated');
 
@@ -249,4 +554,9 @@ export function deactivate() {
         autoSyncDisposable.dispose();
         autoSyncDisposable = null;
     }
+
+    // Clean up token monitoring
+    tokenMonitor?.dispose();
+    mcpContextManager?.dispose();
+    chatInterceptor?.dispose();
 }

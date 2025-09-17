@@ -213,8 +213,8 @@ export class Context {
     /**
      * Public wrapper for prepareCollection private method
      */
-    async getPreparedCollection(codebasePath: string): Promise<void> {
-        return this.prepareCollection(codebasePath);
+    async getPreparedCollection(codebasePath: string, threadId?: string): Promise<void> {
+        return this.prepareCollection(codebasePath, false, undefined, threadId);
     }
 
     /**
@@ -229,9 +229,16 @@ export class Context {
     }
 
     /**
-     * Generate collection name based on codebase path and hybrid mode
+     * Generate collection name based on codebase path and thread context
      */
-    public getCollectionName(codebasePath: string): string {
+    public getCollectionName(codebasePath: string, threadId?: string): string {
+        if (threadId) {
+            // Thread-specific collection name
+            const threadHash = crypto.createHash('md5').update(threadId).digest('hex');
+            return `copilot_thread_chunks_${threadHash.substring(0, 8)}`;
+        }
+
+        // Fallback to path-based collection for backward compatibility
         const isHybrid = this.getIsHybrid();
         const normalizedPath = path.resolve(codebasePath);
         const hash = crypto.createHash('md5').update(normalizedPath).digest('hex');
@@ -240,16 +247,20 @@ export class Context {
     }
 
     /**
-     * Index a codebase for semantic search
-     * @param codebasePath Codebase root path
+     * Index a codebase: recursively scan files, split into chunks, embed, and store in vector database
+     * @param codebasePath Path to the codebase directory
      * @param progressCallback Optional progress callback function
      * @param forceReindex Whether to recreate the collection even if it exists
+     * @param collectionDescription Optional custom description for the collection (uses thread title if provided)
+     * @param threadId Optional thread ID for creating thread-specific collections
      * @returns Indexing statistics
      */
     async indexCodebase(
         codebasePath: string,
-        progressCallback?: (progress: { phase: string; current: number; total: number; percentage: number }) => void,
-        forceReindex: boolean = false
+        progressCallback?: (info: { phase: string; percentage: number }) => void,
+        forceReindex: boolean = false,
+        collectionDescription?: string,
+        threadId?: string
     ): Promise<{ indexedFiles: number; totalChunks: number; status: 'completed' | 'limit_reached' }> {
         const isHybrid = this.getIsHybrid();
         const searchType = isHybrid === true ? 'hybrid search' : 'semantic search';
@@ -259,17 +270,17 @@ export class Context {
         await this.loadIgnorePatterns(codebasePath);
 
         // 2. Check and prepare vector collection
-        progressCallback?.({ phase: 'Preparing collection...', current: 0, total: 100, percentage: 0 });
+        progressCallback?.({ phase: 'Preparing collection...', percentage: 0 });
         console.log(`Debug2: Preparing vector collection for codebase${forceReindex ? ' (FORCE REINDEX)' : ''}`);
-        await this.prepareCollection(codebasePath, forceReindex);
+        await this.prepareCollection(codebasePath, forceReindex, collectionDescription, threadId);
 
         // 3. Recursively traverse codebase to get all supported files
-        progressCallback?.({ phase: 'Scanning files...', current: 5, total: 100, percentage: 5 });
+        progressCallback?.({ phase: 'Scanning files...', percentage: 5 });
         const codeFiles = await this.getCodeFiles(codebasePath);
         console.log(`[Context] 📁 Found ${codeFiles.length} code files`);
 
         if (codeFiles.length === 0) {
-            progressCallback?.({ phase: 'No files to index', current: 100, total: 100, percentage: 100 });
+            progressCallback?.({ phase: 'No files to index', percentage: 100 });
             return { indexedFiles: 0, totalChunks: 0, status: 'completed' };
         }
 
@@ -289,8 +300,6 @@ export class Context {
                 console.log(`[Context] 📊 Processed ${fileIndex}/${totalFiles} files`);
                 progressCallback?.({
                     phase: `Processing files (${fileIndex}/${totalFiles})...`,
-                    current: fileIndex,
-                    total: totalFiles,
                     percentage: Math.round(progressPercentage)
                 });
             }
@@ -300,8 +309,6 @@ export class Context {
 
         progressCallback?.({
             phase: 'Indexing complete!',
-            current: result.processedFiles,
-            total: codeFiles.length,
             percentage: 100
         });
 
@@ -406,12 +413,12 @@ export class Context {
      * @param topK Number of results to return
      * @param threshold Similarity threshold
      */
-    async semanticSearch(codebasePath: string, query: string, topK: number = 5, threshold: number = 0.5, filterExpr?: string): Promise<SemanticSearchResult[]> {
+    async semanticSearch(codebasePath: string, query: string, topK: number = 5, threshold: number = 0.5, filterExpr?: string, threadId?: string): Promise<SemanticSearchResult[]> {
         const isHybrid = this.getIsHybrid();
         const searchType = isHybrid === true ? 'hybrid search' : 'semantic search';
         console.log(`[Context] 🔍 Executing ${searchType}: "${query}" in ${codebasePath}`);
 
-        const collectionName = this.getCollectionName(codebasePath);
+        const collectionName = this.getCollectionName(codebasePath, threadId);
         console.log(`[Context] 🔍 Using collection: ${collectionName}`);
 
         // Check if collection exists and has data
@@ -622,11 +629,11 @@ export class Context {
     /**
      * Prepare vector collection
      */
-    private async prepareCollection(codebasePath: string, forceReindex: boolean = false): Promise<void> {
+    private async prepareCollection(codebasePath: string, forceReindex: boolean = false, customDescription?: string, threadId?: string): Promise<void> {
         const isHybrid = this.getIsHybrid();
         const collectionType = isHybrid === true ? 'hybrid vector' : 'vector';
         console.log(`[Context] 🔧 Preparing ${collectionType} collection for codebase: ${codebasePath}${forceReindex ? ' (FORCE REINDEX)' : ''}`);
-        const collectionName = this.getCollectionName(codebasePath);
+        const collectionName = this.getCollectionName(codebasePath, threadId);
 
         // Check if collection already exists
         const collectionExists = await this.vectorDatabase.hasCollection(collectionName);
@@ -647,10 +654,13 @@ export class Context {
         console.log(`[Context] 📏 Detected dimension: ${dimension} for ${this.embedding.getProvider()}`);
         const dirName = path.basename(codebasePath);
 
+        // Use custom description if provided, otherwise fall back to folder-based description
+        const description = customDescription || `${isHybrid ? 'Hybrid Index' : 'Index'} for ${dirName}`;
+
         if (isHybrid === true) {
-            await this.vectorDatabase.createHybridCollection(collectionName, dimension, `Hybrid Index for ${dirName}`);
+            await this.vectorDatabase.createHybridCollection(collectionName, dimension, description);
         } else {
-            await this.vectorDatabase.createCollection(collectionName, dimension, `Index for ${dirName}`);
+            await this.vectorDatabase.createCollection(collectionName, dimension, description);
         }
 
         console.log(`[Context] ✅ Collection ${collectionName} created successfully (dimension: ${dimension})`);
