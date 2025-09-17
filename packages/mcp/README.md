@@ -3,10 +3,20 @@
 ![](../../assets/claude-context.png)
 Model Context Protocol (MCP) integration for Claude Context - A powerful MCP server that enables AI assistants and agents to index and search codebases using semantic search.
 
+## 🧠 Enhanced with Revolutionary Conversation Memory
+
+**This enhanced version includes breakthrough conversation memory capabilities:**
+- **Persistent AI Memory**: Store and retrieve conversation history across sessions
+- **Semantic Conversation Search**: Find relevant past discussions using natural language
+- **Smart Context Bootstrapping**: Automatically load relevant context for new sessions
+- **Session Management**: Organize conversations by project and technology
+- All original Claude Context features (code indexing, semantic search)
+
 [![npm version](https://img.shields.io/npm/v/@zilliz/claude-context-mcp.svg)](https://www.npmjs.com/package/@zilliz/claude-context-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/@zilliz/claude-context-mcp.svg)](https://www.npmjs.com/package/@zilliz/claude-context-mcp)
 
 > 📖 **New to Claude Context?** Check out the [main project README](../../README.md) for an overview and setup instructions.
+> 🚀 **VS Code Setup**: See [VS_CODE_CONFIGURATION.md](../../VS_CODE_CONFIGURATION.md) for complete setup guide.
 
 ## 🚀 Use Claude Context as MCP in Claude Code and others
 
@@ -667,6 +677,70 @@ Get the current indexing status of a codebase. Shows progress percentage for act
 **Parameters:**
 
 - `path` (required): Absolute path to the codebase directory to check status for
+
+## 🧠 Conversation Memory Tools
+
+### 5. `store_conversation`
+
+Store a conversation session in memory for future retrieval and context building.
+
+**Parameters:**
+
+- `conversationData` (required): Either a conversation summary string or a complete ConversationSession object with id, title, summary, etc.
+- `project` (optional): Project name to associate with this conversation
+
+**Example:**
+```bash
+# Store current conversation with technical decisions
+store_conversation "Implemented email verification system using JWT tokens with async generation. Fixed circular dependency in auth middleware."
+```
+
+### 6. `search_memory`
+
+Search conversation memory for relevant past discussions using semantic search.
+
+**Parameters:**
+
+- `query` (required): Search query to find relevant conversations
+- `project` (optional): Filter by project name
+- `limit` (optional): Maximum number of results to return (default: 5, max: 20)
+- `minRelevance` (optional): Minimum relevance score (0.0-1.0, default: 0.3)
+
+**Example:**
+```bash
+# Find previous authentication discussions
+search_memory "email verification JWT implementation"
+```
+
+### 7. `list_sessions`
+
+List stored conversation sessions, optionally filtered by project.
+
+**Parameters:**
+
+- `project` (optional): Filter by project name
+- `limit` (optional): Maximum number of sessions to return (default: 10, max: 50)
+
+**Example:**
+```bash
+# List recent conversations for current project
+list_sessions --project="ai-agent-platform" --limit=5
+```
+
+### 8. `bootstrap_context`
+
+Bootstrap context for a new session by searching relevant conversation history.
+
+**Parameters:**
+
+- `query` (required): Query describing what context to bootstrap (e.g., 'email verification system', 'React authentication')
+- `project` (optional): Project name to focus the context search
+
+**Example:**
+```bash
+# Load relevant context for authentication work
+bootstrap_context "user authentication and email verification"
+```
 
 ## Contributing
 

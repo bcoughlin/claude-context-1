@@ -807,18 +807,18 @@ export class ToolHandlers {
     async storeConversation(conversationData: any): Promise<any> {
         try {
             console.log('[MEMORY] Storing conversation session...');
-            
+
             let session: ConversationSession;
-            
+
             // If it's already a ConversationSession object, use it directly
             if (conversationData.id && conversationData.timestamp) {
                 session = conversationData;
             } else {
                 // Create session from summary text
-                const summaryText = typeof conversationData === 'string' 
-                    ? conversationData 
+                const summaryText = typeof conversationData === 'string'
+                    ? conversationData
                     : conversationData.summary || JSON.stringify(conversationData);
-                
+
                 session = createSessionFromSummary(summaryText, conversationData.project);
             }
 
@@ -865,7 +865,7 @@ export class ToolHandlers {
             }
 
             let responseText = `🧠 Found ${results.length} relevant conversation(s):\n\n`;
-            
+
             results.forEach((result, idx) => {
                 responseText += `## ${idx + 1}. ${result.session.title}\n`;
                 responseText += `**Date:** ${result.session.timestamp.toLocaleDateString()}\n`;
@@ -914,7 +914,7 @@ export class ToolHandlers {
             }
 
             let responseText = `📚 Found ${sessions.length} conversation session(s):\n\n`;
-            
+
             sessions.forEach((session, idx) => {
                 responseText += `## ${idx + 1}. ${session.title}\n`;
                 responseText += `**ID:** ${session.id}\n`;
