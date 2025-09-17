@@ -2,18 +2,21 @@ import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 import { Context, COLLECTION_LIMIT_MESSAGE } from "@zilliz/claude-context-core";
+import { ConversationMemory, ConversationSession, createSessionFromSummary } from "@zilliz/claude-context-conversation-memory";
 import { SnapshotManager } from "./snapshot.js";
 import { ensureAbsolutePath, truncateContent, trackCodebasePath } from "./utils.js";
 
 export class ToolHandlers {
     private context: Context;
     private snapshotManager: SnapshotManager;
+    private conversationMemory: ConversationMemory;
     private indexingStats: { indexedFiles: number; totalChunks: number } | null = null;
     private currentWorkspace: string;
 
     constructor(context: Context, snapshotManager: SnapshotManager) {
         this.context = context;
         this.snapshotManager = snapshotManager;
+        this.conversationMemory = new ConversationMemory(context, './conversation-memory');
         this.currentWorkspace = process.cwd();
         console.log(`[WORKSPACE] Current workspace: ${this.currentWorkspace}`);
     }
@@ -792,6 +795,174 @@ export class ToolHandlers {
                 content: [{
                     type: "text",
                     text: `Error getting indexing status: ${error.message || error}`
+                }],
+                isError: true
+            };
+        }
+    }
+
+    /**
+     * Store a conversation session in memory
+     */
+    async storeConversation(conversationData: any): Promise<any> {
+        try {
+            console.log('[MEMORY] Storing conversation session...');
+            
+            let session: ConversationSession;
+            
+            // If it's already a ConversationSession object, use it directly
+            if (conversationData.id && conversationData.timestamp) {
+                session = conversationData;
+            } else {
+                // Create session from summary text
+                const summaryText = typeof conversationData === 'string' 
+                    ? conversationData 
+                    : conversationData.summary || JSON.stringify(conversationData);
+                
+                session = createSessionFromSummary(summaryText, conversationData.project);
+            }
+
+            await this.conversationMemory.storeConversation(session);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: `✅ Conversation session stored successfully!\n\nSession ID: ${session.id}\nTitle: ${session.title}\nTechnologies: ${session.technologies.join(', ')}\nTimestamp: ${session.timestamp.toISOString()}`
+                }]
+            };
+
+        } catch (error: any) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `❌ Error storing conversation: ${error.message || error}`
+                }],
+                isError: true
+            };
+        }
+    }
+
+    /**
+     * Search conversation memory
+     */
+    async searchMemory(query: string, options: any = {}): Promise<any> {
+        try {
+            console.log(`[MEMORY] Searching conversation memory for: "${query}"`);
+
+            const results = await this.conversationMemory.searchMemory(query, {
+                project: options.project,
+                limit: options.limit || 5,
+                minRelevance: options.minRelevance || 0.3
+            });
+
+            if (results.length === 0) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `🔍 No relevant conversation history found for: "${query}"\n\nTry:\n- Different search terms\n- Broader keywords\n- Lower relevance threshold`
+                    }]
+                };
+            }
+
+            let responseText = `🧠 Found ${results.length} relevant conversation(s):\n\n`;
+            
+            results.forEach((result, idx) => {
+                responseText += `## ${idx + 1}. ${result.session.title}\n`;
+                responseText += `**Date:** ${result.session.timestamp.toLocaleDateString()}\n`;
+                responseText += `**Technologies:** ${result.session.technologies.join(', ')}\n`;
+                responseText += `**Relevance:** ${(result.relevanceScore * 100).toFixed(1)}%\n`;
+                responseText += `**Context:** ${result.context}\n\n`;
+            });
+
+            return {
+                content: [{
+                    type: "text",
+                    text: responseText
+                }]
+            };
+
+        } catch (error: any) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `❌ Error searching memory: ${error.message || error}`
+                }],
+                isError: true
+            };
+        }
+    }
+
+    /**
+     * List conversation sessions
+     */
+    async listSessions(options: any = {}): Promise<any> {
+        try {
+            console.log('[MEMORY] Listing conversation sessions...');
+
+            const sessions = await this.conversationMemory.listSessions({
+                project: options.project,
+                limit: options.limit || 10
+            });
+
+            if (sessions.length === 0) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `📝 No conversation sessions found.\n\nTo store conversations, use the store_conversation tool.`
+                    }]
+                };
+            }
+
+            let responseText = `📚 Found ${sessions.length} conversation session(s):\n\n`;
+            
+            sessions.forEach((session, idx) => {
+                responseText += `## ${idx + 1}. ${session.title}\n`;
+                responseText += `**ID:** ${session.id}\n`;
+                responseText += `**Date:** ${session.timestamp.toLocaleDateString()}\n`;
+                responseText += `**Project:** ${session.project || 'None'}\n`;
+                responseText += `**Technologies:** ${session.technologies.join(', ')}\n`;
+                responseText += `**Summary:** ${session.summary.substring(0, 150)}${session.summary.length > 150 ? '...' : ''}\n\n`;
+            });
+
+            return {
+                content: [{
+                    type: "text",
+                    text: responseText
+                }]
+            };
+
+        } catch (error: any) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `❌ Error listing sessions: ${error.message || error}`
+                }],
+                isError: true
+            };
+        }
+    }
+
+    /**
+     * Bootstrap context for new session
+     */
+    async bootstrapContext(query: string, project?: string): Promise<any> {
+        try {
+            console.log(`[MEMORY] Bootstrapping context for: "${query}"`);
+
+            const contextText = await this.conversationMemory.bootstrapContext(query, project);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: `🚀 Context Bootstrap Results:\n\n${contextText}`
+                }]
+            };
+
+        } catch (error: any) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `❌ Error bootstrapping context: ${error.message || error}`
                 }],
                 isError: true
             };

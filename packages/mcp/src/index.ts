@@ -221,6 +221,93 @@ This tool is versatile and can be used before completing various tasks to retrie
                             required: ["path"]
                         }
                     },
+                    {
+                        name: "store_conversation",
+                        description: "Store a conversation session in memory for future retrieval",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                conversationData: {
+                                    type: ["string", "object"],
+                                    description: "Either a conversation summary string or a complete ConversationSession object with id, title, summary, etc."
+                                },
+                                project: {
+                                    type: "string",
+                                    description: "Optional: Project name to associate with this conversation"
+                                }
+                            },
+                            required: ["conversationData"]
+                        }
+                    },
+                    {
+                        name: "search_memory",
+                        description: "Search conversation memory for relevant past discussions",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                query: {
+                                    type: "string",
+                                    description: "Search query to find relevant conversations"
+                                },
+                                project: {
+                                    type: "string",
+                                    description: "Optional: Filter by project name"
+                                },
+                                limit: {
+                                    type: "number",
+                                    description: "Maximum number of results to return",
+                                    default: 5,
+                                    maximum: 20
+                                },
+                                minRelevance: {
+                                    type: "number",
+                                    description: "Minimum relevance score (0.0-1.0)",
+                                    default: 0.3,
+                                    minimum: 0.0,
+                                    maximum: 1.0
+                                }
+                            },
+                            required: ["query"]
+                        }
+                    },
+                    {
+                        name: "list_sessions",
+                        description: "List stored conversation sessions",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                project: {
+                                    type: "string",
+                                    description: "Optional: Filter by project name"
+                                },
+                                limit: {
+                                    type: "number",
+                                    description: "Maximum number of sessions to return",
+                                    default: 10,
+                                    maximum: 50
+                                }
+                            },
+                            required: []
+                        }
+                    },
+                    {
+                        name: "bootstrap_context",
+                        description: "Bootstrap context for a new session by searching relevant conversation history",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                query: {
+                                    type: "string",
+                                    description: "Query describing what context to bootstrap (e.g., 'email verification system', 'React authentication')"
+                                },
+                                project: {
+                                    type: "string",
+                                    description: "Optional: Project name to focus the context search"
+                                }
+                            },
+                            required: ["query"]
+                        }
+                    },
                 ]
             };
         });
@@ -238,6 +325,14 @@ This tool is versatile and can be used before completing various tasks to retrie
                     return await this.toolHandlers.handleClearIndex(args);
                 case "get_indexing_status":
                     return await this.toolHandlers.handleGetIndexingStatus(args);
+                case "store_conversation":
+                    return await this.toolHandlers.storeConversation(args.conversationData);
+                case "search_memory":
+                    return await this.toolHandlers.searchMemory(args.query, args);
+                case "list_sessions":
+                    return await this.toolHandlers.listSessions(args);
+                case "bootstrap_context":
+                    return await this.toolHandlers.bootstrapContext(args.query, args.project);
 
                 default:
                     throw new Error(`Unknown tool: ${name}`);
