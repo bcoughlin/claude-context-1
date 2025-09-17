@@ -1,8 +1,8 @@
 {
-    "name": "semanticcodesearch",
-    "displayName": "Semantic Code Search",
+    "name": "claude-memory",
+    "displayName": "Claude Memory",
     "publisher": "zilliz",
-    "description": "Code indexing and semantic search (built by Claude Context)",
+    "description": "Thread-aware code indexing and memory management for Claude",
     "version": "0.1.3",
     "private": true,
     "engines": {
@@ -32,69 +32,69 @@
     "contributes": {
         "commands": [
             {
-                "command": "semanticCodeSearch.semanticSearch",
+                "command": "claudeMemory.semanticSearch",
                 "title": "Semantic Search",
-                "category": "Semantic Code Search"
+                "category": "Claude Memory"
             },
             {
-                "command": "semanticCodeSearch.indexThread",
+                "command": "claudeMemory.indexThread",
                 "title": "Index Current Thread",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             },
             {
-                "command": "semanticCodeSearch.clearIndex",
+                "command": "claudeMemory.clearIndex",
                 "title": "Clear Index",
-                "category": "Semantic Code Search"
+                "category": "Claude Memory"
             },
             {
                 "command": "claude-context.showTokenStats",
                 "title": "Show Token Statistics",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             },
             {
                 "command": "claude-context.storeContext",
                 "title": "Store Current Context",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             },
             {
                 "command": "claude-context.resetCounter",
                 "title": "Reset Token Counter",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             },
             {
                 "command": "claude-context.manageContext",
                 "title": "Manage Context",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             },
             {
                 "command": "claude-context.searchMemory",
                 "title": "Search Memory",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             },
             {
                 "command": "claude-context.validateMCP",
                 "title": "Validate MCP Connection",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             },
             {
                 "command": "claude-context.browseThreads",
                 "title": "Browse Threads",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             },
             {
                 "command": "claude-context.searchThreads",
                 "title": "Search Threads",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             },
             {
                 "command": "claude-context.newThread",
                 "title": "New Thread",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             },
             {
                 "command": "claude-context.showCurrentThread",
                 "title": "Show Current Thread",
-                "category": "Claude Context"
+                "category": "Claude Memory"
             }
         ],
         "menus": {
