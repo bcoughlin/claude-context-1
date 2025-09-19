@@ -1,5 +1,15 @@
 #!/usr/bin/env node
 
+// Load environment variables first
+import { config } from 'dotenv';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+// Load .env file from the MCP package directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+config({ path: path.join(__dirname, '..', '.env') });
+
 // CRITICAL: Redirect console outputs to stderr IMMEDIATELY to avoid interfering with MCP JSON protocol
 // Only MCP protocol messages should go to stdout
 const originalConsoleLog = console.log;
