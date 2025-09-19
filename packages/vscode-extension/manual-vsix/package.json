@@ -3,7 +3,7 @@
     "displayName": "Vector Memory for VS Code",
     "description": "An extension that provides vector memory capabilities for storing and searching conversational context",
     "version": "0.1.7",
-    "publisher": "local-dev",
+    "publisher": "local-dev", 
     "engines": {
         "vscode": "^1.74.0"
     },
@@ -17,42 +17,12 @@
             {
                 "command": "claude-context.toggleNetworkInterception",
                 "title": "Toggle Network Interception",
-                "category": "Claude Context"
+                "category": "Vector Memory"
             },
             {
                 "command": "claude-context.testCommand",
                 "title": "Test Command",
-                "category": "Claude Context"
-            },
-            {
-                "command": "claude-context.showTokenStats",
-                "title": "Show Token Stats",
-                "category": "Claude Context"
-            },
-            {
-                "command": "claude-context.storeContext",
-                "title": "Store Context",
-                "category": "Claude Context"
-            },
-            {
-                "command": "claude-context.resetCounter",
-                "title": "Reset Token Counter",
-                "category": "Claude Context"
-            },
-            {
-                "command": "claude-context.manageContext",
-                "title": "Manage Context",
-                "category": "Claude Context"
-            },
-            {
-                "command": "claude-context.searchMemory",
-                "title": "Search Memory",
-                "category": "Claude Context"
-            },
-            {
-                "command": "claude-context.validateMCP",
-                "title": "Validate MCP Connection",
-                "category": "Claude Context"
+                "category": "Vector Memory"
             }
         ]
     },
