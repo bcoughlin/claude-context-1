@@ -80,7 +80,7 @@ class ContextMcpServer {
     }
 
     private setupTools() {
-        // Define available tools (memory-focused only)
+        // Define available tools (memory-focused with code search capabilities)
         this.server.setRequestHandler(ListToolsRequestSchema, async () => {
             return {
                 tools: [
@@ -170,12 +170,120 @@ class ContextMcpServer {
                             },
                             required: ["conversationData"]
                         }
+                    },
+                    {
+                        name: "retrieve_memory",
+                        description: "Retrieve a specific conversation session by ID",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                sessionId: {
+                                    type: "string",
+                                    description: "The ID of the conversation session to retrieve"
+                                }
+                            },
+                            required: ["sessionId"]
+                        }
+                    },
+                    {
+                        name: "update_memory",
+                        description: "Update an existing conversation session",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                sessionId: {
+                                    type: "string",
+                                    description: "The ID of the conversation session to update"
+                                },
+                                updates: {
+                                    type: "object",
+                                    description: "Object containing fields to update (title, summary, technologies, etc.)"
+                                }
+                            },
+                            required: ["sessionId", "updates"]
+                        }
+                    },
+                    {
+                        name: "delete_memory",
+                        description: "Delete a conversation session from memory",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                sessionId: {
+                                    type: "string",
+                                    description: "The ID of the conversation session to delete"
+                                }
+                            },
+                            required: ["sessionId"]
+                        }
+                    },
+                    {
+                        name: "index_codebase",
+                        description: "Index a codebase for semantic code search",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                codebasePath: {
+                                    type: "string",
+                                    description: "Path to the codebase directory to index"
+                                },
+                                forceReindex: {
+                                    type: "boolean",
+                                    description: "Whether to recreate the index even if it exists",
+                                    default: false
+                                },
+                                description: {
+                                    type: "string",
+                                    description: "Optional description for the codebase"
+                                },
+                                threadId: {
+                                    type: "string",
+                                    description: "Optional thread ID for thread-specific indexing"
+                                }
+                            },
+                            required: ["codebasePath"]
+                        }
+                    },
+                    {
+                        name: "search_code",
+                        description: "Search indexed code for relevant snippets",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                query: {
+                                    type: "string",
+                                    description: "Search query to find relevant code"
+                                },
+                                limit: {
+                                    type: "number",
+                                    description: "Maximum number of results to return",
+                                    default: 5,
+                                    maximum: 20
+                                },
+                                minRelevance: {
+                                    type: "number",
+                                    description: "Minimum relevance score (0.0-1.0)",
+                                    default: 0.3,
+                                    minimum: 0,
+                                    maximum: 1
+                                },
+                                codebasePath: {
+                                    type: "string",
+                                    description: "Optional: Path to the codebase to search (defaults to current workspace)"
+                                },
+                                threadId: {
+                                    type: "string",
+                                    description: "Optional: Thread ID for thread-specific search"
+                                }
+                            },
+                            required: ["query"]
+                        }
                     }
                 ]
             };
         });
 
-        // Handle tool execution (memory tools only)
+        // Handle tool execution (memory and code search tools)
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const { name, arguments: args } = request.params;
 
@@ -185,18 +293,52 @@ class ContextMcpServer {
                         throw new Error('bootstrap_context requires query argument');
                     }
                     return await this.toolHandlers.bootstrapContext(args.query as string, (args as any).project);
+
                 case "list_sessions":
                     return await this.toolHandlers.listSessions(args as any);
+
                 case "search_memory":
                     if (!args || typeof args !== 'object' || !('query' in args)) {
                         throw new Error('search_memory requires query argument');
                     }
                     return await this.toolHandlers.searchMemory(args.query as string, args as any);
+
                 case "store_conversation":
                     if (!args || typeof args !== 'object' || !('conversationData' in args)) {
                         throw new Error('store_conversation requires conversationData argument');
                     }
                     return await this.toolHandlers.storeConversation(args.conversationData as any);
+
+                case "retrieve_memory":
+                    if (!args || typeof args !== 'object' || !('sessionId' in args)) {
+                        throw new Error('retrieve_memory requires sessionId argument');
+                    }
+                    return await this.toolHandlers.retrieveMemory(args.sessionId as string);
+
+                case "update_memory":
+                    if (!args || typeof args !== 'object' || !('sessionId' in args) || !('updates' in args)) {
+                        throw new Error('update_memory requires sessionId and updates arguments');
+                    }
+                    return await this.toolHandlers.updateMemory(args.sessionId as string, args.updates as any);
+
+                case "delete_memory":
+                    if (!args || typeof args !== 'object' || !('sessionId' in args)) {
+                        throw new Error('delete_memory requires sessionId argument');
+                    }
+                    return await this.toolHandlers.deleteMemory(args.sessionId as string);
+
+                case "index_codebase":
+                    if (!args || typeof args !== 'object' || !('codebasePath' in args)) {
+                        throw new Error('index_codebase requires codebasePath argument');
+                    }
+                    return await this.toolHandlers.indexCodebase(args.codebasePath as string, args as any);
+
+                case "search_code":
+                    if (!args || typeof args !== 'object' || !('query' in args)) {
+                        throw new Error('search_code requires query argument');
+                    }
+                    return await this.toolHandlers.searchCode(args.query as string, args as any);
+
                 default:
                     throw new Error(`Unknown tool: ${name}`);
             }

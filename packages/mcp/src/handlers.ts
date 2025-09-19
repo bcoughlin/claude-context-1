@@ -988,4 +988,274 @@ export class ToolHandlers {
             };
         }
     }
+
+    /**
+     * Retrieve a specific conversation session by ID
+     */
+    async retrieveMemory(sessionId: string): Promise<any> {
+        try {
+            console.log(`[MEMORY] Retrieving session: "${sessionId}"`);
+
+            const session = await this.conversationMemory.getSession(sessionId);
+
+            if (!session) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `❌ Session not found: ${sessionId}\n\nUse list_sessions to see available sessions.`
+                    }],
+                    isError: true
+                };
+            }
+
+            let responseText = `📖 Retrieved Session: ${session.title}\n\n`;
+            responseText += `**ID:** ${session.id}\n`;
+            responseText += `**Date:** ${new Date(session.timestamp).toISOString()}\n`;
+            responseText += `**Project:** ${session.project || 'None'}\n`;
+            responseText += `**Technologies:** ${session.technologies.join(', ')}\n`;
+            responseText += `**Participants:** ${session.participants.join(', ')}\n\n`;
+            responseText += `**Summary:**\n${session.summary}\n\n`;
+
+            if (session.technicalDecisions.length > 0) {
+                responseText += `**Technical Decisions:**\n`;
+                session.technicalDecisions.forEach((decision: any, idx: number) => {
+                    responseText += `${idx + 1}. ${decision}\n`;
+                });
+                responseText += '\n';
+            }
+
+            if (session.codeChanges.length > 0) {
+                responseText += `**Code Changes:**\n`;
+                session.codeChanges.forEach((change: any, idx: number) => {
+                    responseText += `${idx + 1}. ${change}\n`;
+                });
+                responseText += '\n';
+            }
+
+            if (session.architecture.length > 0) {
+                responseText += `**Architecture Notes:**\n`;
+                session.architecture.forEach((note: any, idx: number) => {
+                    responseText += `${idx + 1}. ${note}\n`;
+                });
+            }
+
+            return {
+                content: [{
+                    type: "text",
+                    text: responseText
+                }]
+            };
+
+        } catch (error: any) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `❌ Error retrieving memory: ${error.message || error}`
+                }],
+                isError: true
+            };
+        }
+    }
+
+    /**
+     * Update an existing conversation session
+     */
+    async updateMemory(sessionId: string, updates: any): Promise<any> {
+        try {
+            console.log(`[MEMORY] Updating session: "${sessionId}"`);
+
+            const existingSession = await this.conversationMemory.getSession(sessionId);
+            if (!existingSession) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `❌ Session not found: ${sessionId}\n\nUse list_sessions to see available sessions.`
+                    }],
+                    isError: true
+                };
+            }
+
+            // Merge updates with existing session
+            const updatedSession = {
+                ...existingSession,
+                ...updates,
+                id: sessionId, // Preserve ID
+                timestamp: existingSession.timestamp // Preserve original timestamp
+            };
+
+            await this.conversationMemory.updateSession(sessionId, updatedSession);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: `✅ Session updated successfully!\n\nSession ID: ${sessionId}\nTitle: ${updatedSession.title}\nUpdated fields: ${Object.keys(updates).join(', ')}`
+                }]
+            };
+
+        } catch (error: any) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `❌ Error updating memory: ${error.message || error}`
+                }],
+                isError: true
+            };
+        }
+    }
+
+    /**
+     * Delete a conversation session
+     */
+    async deleteMemory(sessionId: string): Promise<any> {
+        try {
+            console.log(`[MEMORY] Deleting session: "${sessionId}"`);
+
+            const existingSession = await this.conversationMemory.getSession(sessionId);
+            if (!existingSession) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `❌ Session not found: ${sessionId}\n\nUse list_sessions to see available sessions.`
+                    }],
+                    isError: true
+                };
+            }
+
+            await this.conversationMemory.deleteSession(sessionId);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: `🗑️ Session deleted successfully!\n\nDeleted: ${existingSession.title} (${sessionId})`
+                }]
+            };
+
+        } catch (error: any) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `❌ Error deleting memory: ${error.message || error}`
+                }],
+                isError: true
+            };
+        }
+    }
+
+    /**
+     * Index a codebase for code search
+     */
+    async indexCodebase(codebasePath: string, options: any = {}): Promise<any> {
+        try {
+            console.log(`[CODE] Indexing codebase: "${codebasePath}"`);
+
+            // Force absolute path resolution
+            const absolutePath = ensureAbsolutePath(codebasePath);
+
+            // Validate path exists
+            if (!fs.existsSync(absolutePath)) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `❌ Path '${absolutePath}' does not exist. Original input: '${codebasePath}'`
+                    }],
+                    isError: true
+                };
+            }
+
+            // Check if it's a directory
+            const stat = fs.statSync(absolutePath);
+            if (!stat.isDirectory()) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `❌ Path '${absolutePath}' is not a directory`
+                    }],
+                    isError: true
+                };
+            }
+
+            // Start indexing using the Context class
+            const result = await this.context.indexCodebase(
+                absolutePath,
+                undefined, // No progress callback for MCP
+                options.forceReindex || false,
+                options.description,
+                options.threadId
+            );
+
+            this.indexingStats = result;
+
+            return {
+                content: [{
+                    type: "text",
+                    text: `✅ Codebase indexed successfully!\n\nPath: ${absolutePath}\nIndexed Files: ${result.indexedFiles}\nTotal Chunks: ${result.totalChunks}\nStatus: ${result.status}`
+                }]
+            };
+
+        } catch (error: any) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `❌ Error indexing codebase: ${error.message || error}`
+                }],
+                isError: true
+            };
+        }
+    }
+
+    /**
+     * Search indexed code
+     */
+    async searchCode(query: string, options: any = {}): Promise<any> {
+        try {
+            console.log(`[CODE] Searching code for: "${query}"`);
+
+            // We need a codebase path for semantic search
+            const codebasePath = options.codebasePath || this.currentWorkspace;
+
+            const searchResults = await this.context.semanticSearch(
+                codebasePath,
+                query,
+                options.limit || 5,
+                options.minRelevance || 0.3,
+                options.filterExpr,
+                options.threadId
+            );
+
+            if (searchResults.length === 0) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `🔍 No relevant code found for: "${query}"\n\nTry:\n- Different search terms\n- Index a codebase first using index_codebase\n- Lower relevance threshold\n- Specify a different codebasePath`
+                    }]
+                };
+            }
+
+            let responseText = `🔍 Found ${searchResults.length} relevant code result(s):\n\n`;
+
+            searchResults.forEach((result: any, idx: number) => {
+                responseText += `## ${idx + 1}. ${result.relativePath || result.filePath}\n`;
+                responseText += `**Lines:** ${result.startLine}-${result.endLine}\n`;
+                responseText += `**Language:** ${result.language || 'Unknown'}\n`;
+                responseText += `**Relevance:** ${(result.score * 100).toFixed(1)}%\n`;
+                responseText += `**Preview:**\n\`\`\`${result.language || 'text'}\n${result.content}\n\`\`\`\n\n`;
+            });
+
+            return {
+                content: [{
+                    type: "text",
+                    text: responseText
+                }]
+            };
+
+        } catch (error: any) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `❌ Error searching code: ${error.message || error}`
+                }],
+                isError: true
+            };
+        }
+    }
 } 

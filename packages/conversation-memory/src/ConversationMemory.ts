@@ -53,6 +53,86 @@ export class ConversationMemory {
   }
 
   /**
+   * Get a specific conversation session by ID
+   */
+  async getSession(sessionId: string): Promise<ConversationSession | null> {
+    try {
+      const metadataPath = path.join(this.conversationStorePath, `${sessionId}.json`);
+
+      if (!fs.existsSync(metadataPath)) {
+        return null;
+      }
+
+      const sessionData = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      return sessionData;
+    } catch (error) {
+      console.error('[ConversationMemory] Failed to get session:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update a conversation session
+   */
+  async updateSession(sessionId: string, updatedSession: ConversationSession): Promise<boolean> {
+    try {
+      const metadataPath = path.join(this.conversationStorePath, `${sessionId}.json`);
+
+      if (!fs.existsSync(metadataPath)) {
+        return false;
+      }
+
+      // Update the metadata
+      fs.writeFileSync(metadataPath, JSON.stringify(updatedSession, null, 2));
+
+      // Update the content file for vector search
+      const enhancedContent = this.extractTechnicalContent(updatedSession);
+      const tempFilePath = path.join(this.conversationStorePath, `${sessionId}.md`);
+      fs.writeFileSync(tempFilePath, enhancedContent);
+
+      // Re-index the conversation directory
+      await this.context.indexCodebase(this.conversationStorePath);
+
+      return true;
+    } catch (error) {
+      console.error('[ConversationMemory] Failed to update session:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Delete a conversation session
+   */
+  async deleteSession(sessionId: string): Promise<boolean> {
+    try {
+      const metadataPath = path.join(this.conversationStorePath, `${sessionId}.json`);
+      const contentPath = path.join(this.conversationStorePath, `${sessionId}.md`);
+
+      let deleted = false;
+
+      if (fs.existsSync(metadataPath)) {
+        fs.unlinkSync(metadataPath);
+        deleted = true;
+      }
+
+      if (fs.existsSync(contentPath)) {
+        fs.unlinkSync(contentPath);
+        deleted = true;
+      }
+
+      if (deleted) {
+        // Re-index the conversation directory
+        await this.context.indexCodebase(this.conversationStorePath);
+      }
+
+      return deleted;
+    } catch (error) {
+      console.error('[ConversationMemory] Failed to delete session:', error);
+      return false;
+    }
+  }
+
+  /**
    * Search conversation memory using semantic search
    */
   async searchMemory(
